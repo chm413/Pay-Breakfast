@@ -9,6 +9,16 @@ npm install
 npm run start:dev
 ```
 
+## 部署指南
+
+1. **准备运行环境**：Node.js 18+、MySQL 8+，并创建数据库（默认名 `pay_breakfast`）。
+2. **安装依赖**：在项目根目录执行 `npm install`。
+3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
+4. **编译代码**：执行 `npm run build`，生成 `dist/` 产物。
+5. **启动服务**：使用 `npm start` 运行编译后的服务（如需后台常驻可结合 pm2/systemd）。
+
+> 默认开启 TypeORM `synchronize` 方便演示，生产环境建议关闭并使用迁移以避免意外结构变更。
+
 ### 编译 / 检查
 
 如需验证 TypeScript 编译（无运行数据库也可执行），运行：
