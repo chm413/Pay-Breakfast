@@ -11,7 +11,8 @@ npm run start:dev
 
 ## 部署指南
 
-1. **准备运行环境**：Node.js 18+、MySQL 8+，并创建数据库（默认名 `pay_breakfast`）。
+
+1. **准备运行环境**：Node.js 18+、MySQL 5.7.43+（兼容 8.x），并创建数据库（默认名 `pay_breakfast`）。
 2. **安装依赖**：在项目根目录执行 `npm install`。
 3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
 4. **编译代码**：执行 `npm run build`，生成 `dist/` 产物。
@@ -32,6 +33,10 @@ npm test
 * `DB_HOST` / `DB_PORT`
 * `DB_USERNAME` / `DB_PASSWORD`
 * `DB_NAME`
+* `DB_CHARSET`（可选，默认 `utf8mb4_unicode_ci`，便于在旧版本 MySQL 上兼容 Emoji 等字符）
+
+> TypeORM 已启用 `supportBigNumbers`、`legacySpatialSupport` 和 `dateStrings` 以兼容 MySQL 5.7.43 默认行为，如需调整可通过环境变量覆盖连接参数。
+
 
 > 当前开启 TypeORM `synchronize` 便于本地启动，生产环境请改为迁移方案。
 
