@@ -37,8 +37,28 @@ npm test
 
 > TypeORM 已启用 `supportBigNumbers`、`legacySpatialSupport` 和 `dateStrings` 以兼容 MySQL 5.7.43 默认行为，如需调整可通过环境变量覆盖连接参数。
 
-
 > 当前开启 TypeORM `synchronize` 便于本地启动，生产环境请改为迁移方案。
+
+### 宝塔面板 + PM2 部署示例
+
+在宝塔面板的“添加 Node 项目”中选择 **PM2 项目**，关键字段示例（参考截图）：
+
+| 字段 | 示例值 | 说明 |
+| --- | --- | --- |
+| Node版本 | 自定义添加 → v22.20.0 | 与本地构建一致的 LTS 版本 |
+| 入口文件 | `/www/wwwroot/Pay-Breakfast/dist/main.js` | 先在服务器执行 `npm install && npm run build` 生成 dist |
+| 项目名称 | `pay-breakfast-api` | 可自定义 |
+| 运行用户 | `www` | 与站点一致即可 |
+| 内存上限 | `1024` | 超过自动重启，可按机器规格调整 |
+| 启动脚本参数 | `--color`（可留空） | 如需额外 Node 参数可填入 |
+| 项目路径 | `/www/wwwroot/Pay-Breakfast` | 包含 `package.json` 的目录 |
+| 环境变量 | 一行一个，例如：<br>`PORT=3000`<br>`DB_HOST=127.0.0.1`<br>`DB_PORT=3306`<br>`DB_USERNAME=pay_user`<br>`DB_PASSWORD=pay_pass`<br>`DB_NAME=pay_breakfast`<br>`JWT_SECRET=change_me` | 与后端配置一致 |
+
+* 部署步骤：
+  1. 使用宝塔终端或 SSH 将项目代码放到 `项目路径`，执行 `npm install && npm run build`。
+  2. 在 PM2 表单填入上表参数并保存，点击“添加/保存”后启动。
+  3. 若前面配置了反向代理域名，将域名指向服务器并转发到 `PORT` 端口，即可让前端通过 `VITE_API_BASE_URL` 访问。
+  4. 如需日志查看，可在宝塔 PM2 管理中查看 `out`/`error` 日志或使用 `pm2 logs pay-breakfast-api`。
 
 ## 核心功能概览
 
