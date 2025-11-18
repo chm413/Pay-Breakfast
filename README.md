@@ -11,6 +11,7 @@ npm run start:dev
 
 ## 部署指南
 
+
 1. **准备运行环境**：Node.js 18+、MySQL 5.7.43+（兼容 8.x），并创建数据库（默认名 `pay_breakfast`）。
 2. **安装依赖**：在项目根目录执行 `npm install`。
 3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
@@ -18,44 +19,6 @@ npm run start:dev
 5. **启动服务**：使用 `npm start` 运行编译后的服务（如需后台常驻可结合 pm2/systemd）。
 
 > 默认开启 TypeORM `synchronize` 方便演示，生产环境建议关闭并使用迁移以避免意外结构变更。
-
-### 生产部署与后端对接
-
-* **必填环境变量**（可写入 `.env` 或 PM2 环境配置）：
-  * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
-  * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
-  * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
-* **构建与启动**：
-  ```bash
-  npm install
-  npm run build
-  PORT=3000 DB_HOST=127.0.0.1 DB_PORT=3306 npm start
-  ```
-* **常见对接方式**：
-  * 如果前端部署在 GitHub Pages 或其他静态托管，需在前端构建时将 `VITE_API_BASE_URL` 指向可公网访问的后端域名，例如 `https://api.example.com`。
-  * 反向代理时，确保将 `/` 或 `/api` 路径转发到 NestJS 服务监听的端口，并允许跨域（可在 NestJS 中启用 `app.enableCors()`）。
-  * 数据库需允许应用服务器访问：生产环境推荐通过私网/VPC 连接并开启最小权限账户。
-
-### 前端（React + Vite）
-
-在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录、首页仪表盘、个人中心、管理员充值审核与用户管理。
-
-```bash
-cd frontend
-npm install
-npm run dev          # 本地调试
-VITE_API_BASE_URL=http://localhost:3000 npm run build
-npm run preview      # 预览产物
-```
-
-* **API 地址**：通过环境变量 `VITE_API_BASE_URL` 指向部署好的 NestJS 后端。
-* **GitHub Pages 发布**：Vite 已设置 `base: './'` 便于静态托管。可在 GitHub Actions 或本地执行 `npm run build`，将 `frontend/dist` 推送到 `gh-pages` 分支后在仓库 Settings → Pages 选择该分支，即可生成公开访问地址。
-* **页面组成**：
-  * **登录页**：支持账号密码登录并缓存 JWT。
-  * **仪表盘**：展示账户余额总览、低余额统计、班级批量下单趋势示例。
-  * **个人中心**：显示当前用户信息与个人账户余额阈值。
-  * **充值审核**：列出待审核充值请求，可通过/拒绝。
-  * **用户管理**：展示全量用户并支持启用/禁用切换。
 
 ### 编译 / 检查
 
