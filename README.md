@@ -20,6 +20,80 @@ npm run start:dev
 
 > 默认开启 TypeORM `synchronize` 方便演示，生产环境建议关闭并使用迁移以避免意外结构变更。
 
+### 生产部署与后端对接
+
+* **必填环境变量**（可写入 `.env` 或 PM2 环境配置）：
+  * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
+  * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
+  * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
+* **构建与启动**：
+  ```bash
+  npm install
+  npm run build
+  PORT=3000 DB_HOST=127.0.0.1 DB_PORT=3306 npm start
+  ```
+* **常见对接方式**：
+  * 如果前端部署在 GitHub Pages 或其他静态托管，需在前端构建时将 `VITE_API_BASE_URL` 指向可公网访问的后端域名，例如 `https://api.example.com`。
+  * 反向代理时，确保将 `/` 或 `/api` 路径转发到 NestJS 服务监听的端口，并允许跨域（可在 NestJS 中启用 `app.enableCors()`）。
+  * 数据库需允许应用服务器访问：生产环境推荐通过私网/VPC 连接并开启最小权限账户。
+
+### 前端（React + Vite）
+
+在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录、首页仪表盘、个人中心、管理员充值审核与用户管理。
+
+```bash
+cd frontend
+npm install
+npm run dev          # 本地调试
+VITE_API_BASE_URL=http://localhost:3000 npm run build
+npm run preview      # 预览产物
+```
+
+* **API 地址**：通过环境变量 `VITE_API_BASE_URL` 指向部署好的 NestJS 后端。
+* **GitHub Pages 发布**：Vite 已设置 `base: './'` 便于静态托管。可在 GitHub Actions 或本地执行 `npm run build`，将 `frontend/dist` 推送到 `gh-pages` 分支后在仓库 Settings → Pages 选择该分支，即可生成公开访问地址。
+* **页面组成**：
+  * **登录页**：支持账号密码登录并缓存 JWT。
+  * **仪表盘**：展示账户余额总览、低余额统计、班级批量下单趋势示例。
+  * **个人中心**：显示当前用户信息与个人账户余额阈值。
+  * **充值审核**：列出待审核充值请求，可通过/拒绝。
+  * **用户管理**：展示全量用户并支持启用/禁用切换。
+
+### 前端部署与后端对接教程
+
+以 GitHub Pages 与自有服务器为例，说明如何构建前端并指向 NestJS 后端：
+
+1. **准备后端入口地址**：确保后端可通过公网访问（例如 `https://api.example.com`），并在后端开启 CORS 或通过反向代理放行前端域名。
+2. **配置前端 API 地址**：在 `frontend/` 根目录创建 `.env.production`（或在构建命令前加入环境变量），填写：
+   ```bash
+   VITE_API_BASE_URL=https://api.example.com
+   ```
+   若后端通过反向代理挂载在子路径 `/api`，则写成 `https://api.example.com/api`。
+3. **构建前端产物**：
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   ```
+   产物位于 `frontend/dist`，可直接静态托管。
+4. **部署到 GitHub Pages**：
+   * 创建 `gh-pages` 分支（或使用现成的 GitHub Actions 工作流）并将 `frontend/dist` 内容推送到该分支根目录。
+   * 在仓库 **Settings → Pages** 选择 `Deploy from a branch`，指定 `gh-pages` 分支和 `/ (root)` 目录。
+   * 等待 Pages 发布完成，访问生成的前端 URL，确认页面可加载并能请求后端接口。
+5. **部署到自有服务器 / 宝塔静态站点**：
+   * 将 `frontend/dist` 上传到服务器静态目录（如 Nginx `html/` 或宝塔“创建网站”后的根目录）。
+   * 若与后端同机部署，可在 Nginx/宝塔反向代理中添加：
+     ```nginx
+     location /api/ {
+       proxy_pass http://127.0.0.1:3000/;
+     }
+     ```
+     并把 `VITE_API_BASE_URL` 设为前端域名的 `/api` 路径，例如 `https://front.example.com/api`。
+   * 确认 HTTPS 证书正常（JWT 在浏览器端需通过 HTTPS 传输），必要时在后端 `main.ts` 启用 `app.enableCors({ origin: '<前端域名>', credentials: true })`。
+6. **常见排查**：
+   * 前端报 CORS：检查后端是否允许前端域名、请求头中是否携带 `Authorization`，或在反向代理中是否剥离了该头。
+   * 登录后接口 401：确认 `VITE_API_BASE_URL` 指向正确、后端 JWT 秘钥一致，前端存储的 token 是否过期。
+   * 静态资源 404：若使用子路径部署，确保 `vite.config.ts` 的 `base` 与实际路径一致（当前为 `'./'`，适合 Pages/子路径）。
+
 ### 编译 / 检查
 
 如需验证 TypeScript 编译（无运行数据库也可执行），运行：
