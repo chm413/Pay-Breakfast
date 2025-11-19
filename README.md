@@ -25,6 +25,10 @@ npm run start:dev
   * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
   * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
   * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
+  * 安全增强：
+    * `RSA_PUBLIC_KEY` / `RSA_PRIVATE_KEY`：如不提供，后端会生成临时密钥对（仅当前运行有效），并在启动日志中输出公钥用于前端 RSA 加密登录/注册。
+    * `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_SECURE`、`SMTP_FROM`：配置后可发送找回密码邮件；未配置时会将邮件内容输出到控制台便于人工转发。
+    * `DEFAULT_ADMIN_USERNAME`（默认 `admin`）、`ADMIN_EMAIL`：首次启动无管理员时会自动创建超级管理员并在日志打印随机密码，登录后请立即修改。
 * **构建与启动**：
   ```bash
   npm install
@@ -40,6 +44,10 @@ npm run start:dev
     * `HTTP_HEADERS_TIMEOUT`（默认 66000 ms）
     * `HTTP_REQUEST_TIMEOUT`（默认 60000 ms）
     调整为不低于反向代理的 `proxy_read_timeout`/`keepalive_timeout`，即可避免 502。
+* **安全加固**：
+  * 全局启用 Helmet、WAF 关键字过滤与限流，`/auth` 路径额外防爆破。若需更高并发，可通过环境变量提升代理的限流上限或调整代码中的 `max` 值。
+  * 前端登录/注册/重置密码等敏感字段会使用后端提供的 RSA 公钥加密，确保传输安全。
+  * 后端启动时若不存在超级管理员，会生成随机密码并输出到控制台，请及时使用并修改。
 
 ### 前端（React + Vite）
 

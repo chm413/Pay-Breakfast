@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountsModule } from './accounts/accounts.module';
+import { AuthModule } from './auth/auth.module';
 import { ClassOrdersModule } from './class-orders/class-orders.module';
 import { RechargeModule } from './recharge/recharge.module';
 import * as entities from './entities';
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
       synchronize: true,
     }),
     AccountsModule,
+    AuthModule,
     ClassOrdersModule,
     RechargeModule,
     NotificationsModule,

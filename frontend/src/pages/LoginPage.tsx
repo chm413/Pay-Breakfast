@@ -36,7 +36,7 @@ export default function LoginPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0 }}>欢迎登录</h2>
-            <p style={{ color: '#475569', margin: '4px 0 0' }}>校园早餐账户平台</p>
+            <p style={{ color: '#475569', margin: '4px 0 0' }}>鸿铭外卖服务平台</p>
           </div>
           <div className="badge">安全认证</div>
         </div>
@@ -61,8 +61,7 @@ export default function LoginPage() {
           </button>
         </form>
         <div style={{ marginTop: 16, color: '#475569', fontSize: 13 }}>
-          默认演示账号：<br />
-          管理员 admin / 123456 &nbsp;|&nbsp; 班主任 teacher / 123456
+          请使用个人或管理员账号登录，敏感信息已通过 RSA 加密传输。
         </div>
       </div>
     </div>

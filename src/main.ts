@@ -1,4 +1,7 @@
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
 function readTimeoutEnv(key: string, fallback: number): number {
@@ -13,6 +16,36 @@ function readTimeoutEnv(key: string, fallback: number): number {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
+
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 600,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: '请求过于频繁，请稍后再试',
+    }),
+  );
+  app.use(
+    '/auth',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: '鉴权请求过多，请稍后再试',
+    }),
+  );
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const raw = `${req.originalUrl} ${JSON.stringify(req.body || {})} ${JSON.stringify(req.query || {})}`.toLowerCase();
+    const blocked = ['<script', '</script', 'select ', 'union ', '../'];
+    if (blocked.some((keyword) => raw.includes(keyword))) {
+      return res.status(400).send('非法请求已被拒绝');
+    }
+    next();
+  });
 
   const server = app.getHttpAdapter().getHttpServer();
   if (server) {
