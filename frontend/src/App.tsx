@@ -21,7 +21,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="container">
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h2 style={{ margin: 0 }}>校园早餐账户平台</h2>
+          <h2 style={{ margin: 0 }}>鸿铭外卖服务平台</h2>
           <p style={{ margin: 0, color: '#64748b' }}>个人余额、班级批量下单、充值审核一站式管理</p>
         </div>
         <div style={{ textAlign: 'right' }}>

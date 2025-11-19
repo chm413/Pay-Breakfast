@@ -26,6 +26,10 @@ npm run start:dev
   * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
   * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
   * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
+  * 安全增强：
+    * `RSA_PUBLIC_KEY` / `RSA_PRIVATE_KEY`：如不提供，后端会生成临时密钥对（仅当前运行有效），并在启动日志中输出公钥用于前端 RSA 加密登录/注册。
+    * `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_SECURE`、`SMTP_FROM`：配置后可发送找回密码邮件；未配置时会将邮件内容输出到控制台便于人工转发。
+    * `DEFAULT_ADMIN_USERNAME`（默认 `admin`）、`ADMIN_EMAIL`：首次启动无管理员时会自动创建超级管理员并在日志打印随机密码，登录后请立即修改。
 * **构建与启动**：
   ```bash
   npm install
@@ -36,6 +40,15 @@ npm run start:dev
   * 如果前端部署在 GitHub Pages 或其他静态托管，需在前端构建时将 `VITE_API_BASE_URL` 指向可公网访问的后端域名，例如 `https://api.example.com`。
   * 反向代理时，确保将 `/` 或 `/api` 路径转发到 NestJS 服务监听的端口，并允许跨域（可在 NestJS 中启用 `app.enableCors()`）。
   * 数据库需允许应用服务器访问：生产环境推荐通过私网/VPC 连接并开启最小权限账户。
+  * 如果代理（Nginx/宝塔）报 `502 upstream prematurely closed connection while reading response header from upstream`，可调整后端的 keep-alive 相关环境变量：
+    * `HTTP_KEEP_ALIVE_TIMEOUT`（默认 65000 ms）
+    * `HTTP_HEADERS_TIMEOUT`（默认 66000 ms）
+    * `HTTP_REQUEST_TIMEOUT`（默认 60000 ms）
+    调整为不低于反向代理的 `proxy_read_timeout`/`keepalive_timeout`，即可避免 502。
+* **安全加固**：
+  * 全局启用 Helmet、WAF 关键字过滤与限流，`/auth` 路径额外防爆破。若需更高并发，可通过环境变量提升代理的限流上限或调整代码中的 `max` 值。
+  * 前端登录/注册/重置密码等敏感字段会使用后端提供的 RSA 公钥加密，确保传输安全。
+  * 后端启动时若不存在超级管理员，会生成随机密码并输出到控制台，请及时使用并修改。
 
 ### 前端（React + Vite）
 
@@ -88,6 +101,7 @@ npm run preview      # 预览产物
      }
      ```
      并把 `VITE_API_BASE_URL` 设为前端域名的 `/api` 路径，例如 `https://front.example.com/api`。
+    * 后端若通过 PM2/Node 提供服务，请同步设置上面的 `HTTP_*_TIMEOUT` 环境变量，避免代理空闲连接被 Node 过早关闭导致 502。
    * 确认 HTTPS 证书正常（JWT 在浏览器端需通过 HTTPS 传输），必要时在后端 `main.ts` 启用 `app.enableCors({ origin: '<前端域名>', credentials: true })`。
 6. **常见排查**：
    * 前端报 CORS：检查后端是否允许前端域名、请求头中是否携带 `Authorization`，或在反向代理中是否剥离了该头。
@@ -113,7 +127,17 @@ npm test
 
 > 当前开启 TypeORM `synchronize` 便于本地启动，生产环境请改为迁移方案。
 
-### 宝塔面板 + PM2 部署示例
+### PM2 / 宝塔面板部署示例
+
+仓库根目录提供了 `ecosystem.config.js`，可直接在服务器执行：
+
+```bash
+npm install
+npm run build
+pm2 start ecosystem.config.js --env production
+```
+
+如需自定义数据库、端口或 JWT 秘钥，可编辑该文件中的 `env` / `env_production` 字段，或在启动命令后追加 `--env` 指向自定义环境。`ecosystem.config.js` 默认以 `dist/main.js` 作为入口，因此在运行 PM2 之前务必先完成 `npm run build`。
 
 在宝塔面板的“添加 Node 项目”中选择 **PM2 项目**，关键字段示例（参考截图）：
 

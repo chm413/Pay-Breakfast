@@ -1,3 +1,4 @@
+import { JSEncrypt } from 'jsencrypt';
 import { UserProfile } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -5,6 +6,26 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
 interface LoginResponse {
   accessToken: string;
   userInfo: UserProfile;
+}
+
+let cachedPublicKey: string | null = null;
+
+async function fetchPublicKey(): Promise<string> {
+  if (cachedPublicKey) return cachedPublicKey;
+  const data = await request<{ publicKey: string }>('/auth/public-key');
+  cachedPublicKey = data.publicKey;
+  return cachedPublicKey;
+}
+
+async function encryptSensitive(content: string): Promise<string> {
+  const publicKey = await fetchPublicKey();
+  const encryptor = new JSEncrypt();
+  encryptor.setPublicKey(publicKey);
+  const encrypted = encryptor.encrypt(content);
+  if (!encrypted) {
+    throw new Error('加密失败，请稍后重试');
+  }
+  return encrypted;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -26,9 +47,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export async function login(username: string, password: string) {
+  const encryptedPassword = await encryptSensitive(password);
   const data = await request<LoginResponse>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password: encryptedPassword, encrypted: true }),
   });
   return data;
 }
