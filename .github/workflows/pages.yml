@@ -38,13 +38,11 @@ jobs:
           VITE_API_BASE_URL: https://api.example.com
         run: npm run build
 
-      # 必须使用新版 v5
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v5   # ✅ 最新版本
 
-      # 必须升级到新版 v3
       - name: Upload static site artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3   # ✅ 最新版本
         with:
           path: frontend/dist
 
@@ -55,7 +53,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # deploy-pages 也必须升级到 v5
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4   # ✅ 正确版本，没有 v5
