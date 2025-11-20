@@ -11,7 +11,6 @@ npm run start:dev
 
 ## 部署指南
 
-
 1. **准备运行环境**：Node.js 18+、MySQL 5.7.43+（兼容 8.x），并创建数据库（默认名 `pay_breakfast`）。
 2. **安装依赖**：在项目根目录执行 `npm install`。
 3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
