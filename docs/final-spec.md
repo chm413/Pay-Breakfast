@@ -115,3 +115,203 @@
 - 登录失败：确认前端获取公钥是否最新，RSA 密钥是否更新；如重启生成新密钥，需同步前端缓存。
 - 余额错误：确保数据库启用事务；消费/充值必须写入 `transactions` 并同步 `accounts.balance`。
 
+## 9. 增量需求：早餐商品、用户管理、下单与注册改造（A–F）
+
+以下为在现有 NestJS + TypeORM 后端、React + Vite 前端基础上的增量规范，可直接交给模型实现。
+
+### A. 早餐种类/价格管理（Admin 专用）
+
+**数据表**
+
+- `breakfast_categories`：`id`, `name`(唯一), `sort_order`(默认0), `enabled`(TINYINT, 默认1), `created_at`, `updated_at`。
+- `breakfast_products`：`id`, `category_id`(FK), `name`, `price`(DECIMAL10,2), `unit`(默认`份`), `enabled`(默认1), `remark`(可空), `created_at`, `updated_at`。
+
+> 价格仅存当前值；`enabled=0` 表示下架但保留历史引用。
+
+**Admin 接口**（仅 ADMIN/MANAGER）：
+
+- `GET /admin/categories`
+- `POST /admin/categories` `{ name, sortOrder?, enabled? }`
+- `PUT /admin/categories/:id`
+- `DELETE /admin/categories/:id`（可软删或置 `enabled=0`）
+- `GET /admin/products?categoryId=&enabled=`
+- `POST /admin/products` `{ categoryId, name, price, unit?, enabled?, remark? }`
+- `PUT /admin/products/:id`
+- `DELETE /admin/products/:id`（软删/下架）
+
+**前端页面**
+
+- 新增菜单：早餐分类管理、早餐商品管理。表格支持新增/编辑/禁用，商品表可按分类过滤并显示名称/分类/价格/单位/状态/备注/操作。
+
+### B. 用户管理增强：手动创建 + 敏感信息分级
+
+**手动创建用户接口** `POST /admin/users`
+
+请求体：`{ username, realName, email, role: ADMIN|MANAGER|MEMBER, initialBalance, creditLimit, classOrDorm }`
+
+规则：
+
+1. 仅 ADMIN/MANAGER 可调用；`username` 唯一。
+2. 创建 `users` + 绑定角色 + 创建个人账户（余额=initialBalance，透支=creditLimit）。
+3. 返回随机初始密码（8–12 位）或允许自定义；可选发送通知/邮件告知。
+
+**敏感字段分级**
+
+- 敏感字段：邮箱、手机号、余额、透支额度、风险/欠款详情、还款凭证链接等。
+- `GET /admin/users`：有权限返回全部字段；无权限返回 `403 { code: "NO_PERMISSION", message: "无权查看敏感信息" }`。
+- `GET /users/me`/`GET /members/:id`：普通成员只能看到自己的敏感字段，查看他人时自动裁剪。
+
+**前端显示规则**
+
+- 无 admin/manager 权限则隐藏“用户管理”菜单；若直接访问路由，显示红色警告条“你没有权限查看此页面，已记录本次访问。”并在接口返回 403 时保持警告。
+
+### C. 注册流程：邮箱验证码 + 注册
+
+**新表** `email_verification_codes`：`id`, `email`, `code`(6–8 位), `purpose`(REGISTER/RESET_PWD), `expires_at`, `created_at`，索引 `email+purpose`、`expires_at`。
+
+**接口**
+
+1. `POST /auth/register/request-code` `{ email }`
+   - 若 email 已注册 → 返回 `EMAIL_EXISTS`。
+   - 限流：同一 email 60 秒 1 次，同一 IP 每小时 N 次。
+   - 生成 code 写表并发邮件。
+2. `POST /auth/register` `{ email, code, username, password, realName }`
+   - 校验验证码存在、未过期、purpose=REGISTER；通过后作废验证码。
+   - 创建用户与个人账户（默认余额 0，透支可用系统默认 30）。
+   - 返回登录 token。
+
+**前端注册 UI**
+
+- 步骤：输入邮箱→获取验证码（倒计时）；填写验证码+用户名+密码+姓名完成注册；验证码错误/过期提示重发。
+
+### D. 示例/种子数据缩减
+
+- 默认商品示例 3–5 个（如肉包4、菜包3、豆浆2.5）。
+- 默认用户：1 个 admin，2 个 member，余额 10/20，透支不超 30；避免上百用户或上千金额。
+
+### E. 下单模型与页面改造
+
+**数据表**
+
+- `orders`：`id`, `order_type`(PERSONAL/BATCH), `creator_user_id`, `target_user_id`(PERSONAL=自己，BATCH 可空), `remark`(每单备注), `total_amount`, `status`(created/partially_success/success/canceled), `created_at`, `updated_at`。
+- `order_items`：`id`, `order_id`, `personal_account_id`, `product_id`, `quantity`, `unit_price`（锁价）, `amount`, `item_remark`(可空), `transaction_id`(成功时), `status`(pending/success/failed), `fail_reason`, `created_at`, `updated_at`。
+
+> 单价在下单时锁定；订单备注与单品备注分离。
+
+**个人下单 `POST /orders`**
+
+- 请求：`{ items: [{ productId, quantity, itemRemark? }...], remark }`。
+- 仅登录用户给自己下单；逐项扣个人账户。全部失败→`canceled`，部分失败→`partially_success`，全部成功→`success`；返回成功/失败原因。
+
+**批量下单 `POST /admin/batch-orders`**
+
+- 请求：`{ targets: [{ userId, items: [...] }...], remark }`。
+- 仅 admin/manager；逐用户扣款并标记失败原因。可沿用现有“单次最多 N 人、总额上限 M”安全限制。
+
+**前端页面**
+
+- 个人下单：商品列表来自 `/products`（仅 enabled=1），支持数量、单品备注、整单备注，提交后展示成功/失败条目。
+- 批量下单：左侧选人、右侧选商品，可复制上一人组合，展示成功/失败及总金额；支持每单备注。
+
+### F. 权限不足时的统一警告
+
+- 敏感页面（用户管理、还款审核、批量下单、商品管理）若检测无权限：菜单隐藏；强行访问时显示警告条并在接口返回 403 后保持，后端返回 `{ code: "NO_PERMISSION", message: "你无权访问该资源" }`，并可记录操作日志。
+
+## 10. 增量补丁：订餐需求、模板复用、提醒与多账本
+
+以下为在现有 Pay-Breakfast 基础上追加的增量改造，按表结构、接口、前端表现与业务规则列出，直接叠加即可。
+
+### 1) 订餐需求申报与一键转订单
+
+**新表 `order_requests`**（如已有同名表，补齐字段）：
+
+- `id` BIGINT PK
+- `ledger_id` BIGINT NOT NULL
+- `user_id` BIGINT NOT NULL
+- `request_date` DATE NOT NULL
+- `items_json` TEXT NOT NULL（JSON 数组：`[{ productId, quantity, itemRemark? }]`）
+- `remark` VARCHAR(255) NULL
+- `status` ENUM('PENDING','ACCEPTED','REJECTED','CANCELED') DEFAULT 'PENDING'
+- `created_at`, `updated_at`
+- 索引：`(ledger_id, request_date, status)`
+
+**接口**
+
+- 成员提交：`POST /api/order-requests`，成员只能提交自己的，默认每人每天最多 3 条（可配置）。
+- 管理端查看：`GET /api/admin/order-requests?date=YYYY-MM-DD&status=PENDING`。
+- 单条转订单：`POST /api/admin/order-requests/:id/convert-to-order`，读取 `items_json` 走批量下单逻辑，成功则置 `ACCEPTED`，失败返回原因保留 `PENDING`。
+- 批量转订单：`POST /api/admin/order-requests/batch-convert` `{ date, requestIds[], remark }`，将选定需求合并生成一笔 BATCH 订单。
+
+**前端**
+
+- 成员端新增“我要订早餐”页：选择商品/数量/备注后提交需求。
+- 管理端新增“今日订餐队列”页：列表勾选并一键生成订单。
+
+### 2) 订单模板/复用
+
+- `GET /api/orders/last`：成员复用自己最近一笔成功个人订单的 items。
+- `GET /api/admin/orders/template?date=YYYY-MM-DD`：管理员获取某日订单的聚合模板（按 productId 汇总）。
+- 前端：个人下单页“复用上次”；批量下单页“复用某天”。
+
+### 3) 对账提示助手
+
+- 后端：`GET /api/admin/repayment-applications/:id/hints` 返回 `possibleMatches[]`（金额/时间接近的成员）、`duplicateTradeNo`、`riskTip`。
+- 前端：审核弹窗展示黄色提示卡，辅助人工判断。
+
+### 4) 欠款上限与自动提醒/禁单
+
+- 下单前统一校验：`balance - orderTotal >= -credit_limit`，否则整单拒绝 `DEBT_LIMIT_EXCEEDED`。
+- 新配置：`AUTO_BLOCK_ON_DANGER_DEBT`（默认 true）、`DANGER_DEBT_THRESHOLD`（默认=credit_limit）。当余额 < -阈值时写风险事件，且可禁止新订单。
+- 欠款越过提醒/危急阈值时给成员发送通知；欠款列表 danger 优先置顶。
+
+### 5) 还款审核一键全额通过
+
+- 若已支持部分通过，增加“默认全额通过”行为：审核面板提供“一键全额通过”按钮；不改金额直接通过时等价于全额通过。
+
+### 6) 退款/冲正权限强化
+
+- 仅 OWNER 可对任意交易冲正；MANAGER 仅能冲正“自己创建订单产生的交易”。
+- 前端：交易详情增加“冲正/退款”按钮，必填 reason。
+
+### 7) 周/月报表 + 导出 + 欠款群消息
+
+- 报表接口：`GET /api/admin/reports/summary?from=&to=` 增补 `byPayMethod[]`、`byProduct[]`、`topMembers[]`。
+- 导出：`GET /api/admin/reports/summary/export?from=&to=&format=csv` 返回 CSV 流。
+- 欠款群消息：`GET /api/admin/reports/debt-message-template?minDebt=5` 返回可复制文本 `template`。
+- 前端：报表页增加“导出 CSV”“生成群消息”。
+
+### 8) 临时特价 / 今日限量
+
+- 下单锁价至 `order_items.unit_price`；管理端保留“特价规则管理”。
+- 新表 `product_daily_limits`（如未有）：下单/批量下单前检查限量，超限返回 `limitWarning` 但不强制阻止；前端弹窗确认后可带 `force=true` 重试。
+- 接口补丁：`POST /api/orders?force=true`，`POST /api/admin/batch-orders` 支持 body `force=true`。
+
+### 9) 协管（Manager）分级权限
+
+- MANAGER 允许：批量下单/转订餐需求/查看报表/欠款列表、审核还款（可开关）。
+- 禁止：商品价格管理（除非 OWNER 授权）、用户删除/冻结、冲正非本人订单、查看非必要敏感字段（如凭证原图）。
+- 实现：Guard 中增加角色+所属校验；前端仅隐藏入口但不能依赖前端。
+
+### 10) 多 Owner / 多账本支持
+
+- 所有业务表补充 `ledger_id`（默认 1），查询需 `WHERE ledger_id = currentLedgerId`。
+- 登录后返回 ledger 列表；若仅一个自动选中并在请求头带 `X-Ledger-Id`。
+- 新接口：`GET /api/ledgers/me`（我加入的账本）、`POST /api/ledgers`（OWNER 创建）、`POST /api/ledgers/:id/invite`（邀请成员）。
+
+### 11) 未处理订餐需求自动提醒
+
+- 定时任务（nestjs/cron）：每日 07:30 检查当天 `PENDING` 的 `order_requests`，若数量 >0 则给 OWNER 写通知“今日有 X 条订餐需求未生成订单”。
+
+### 12) 成员端欠款原因解释
+
+- 新接口：`GET /api/accounts/me/debt-causes?limit=5`，返回最近导致当前欠款的 `order_items`；前端在余额卡片下展示“当前欠款来源”。
+
+### 13) 批量下单异常快捷处理
+
+- 批量下单返回新增：`failedUsers: [{ userId, reason }]` 与 `suggestedAction: "REMOVE_FAILED_AND_RETRY"`。
+- 前端弹窗列出失败名单，并提供“仅对余额够的人下单”按钮，自动移除失败目标再提交一次。
+
+### 14) 精简种子数据
+
+- 演示/seed 数据控制在小规模：商品 3–5 个，成员 2–3 个，余额/欠款在 ±30 以内，避免大体量样例。
+

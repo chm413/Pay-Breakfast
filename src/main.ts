@@ -4,6 +4,28 @@ import rateLimit from 'express-rate-limit';
 import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
+function ensureRequiredEnv() {
+  const requiredKeys = ['DB_HOST', 'DB_PASSWORD', 'JWT_SECRET'];
+  if ((process.env.NODE_ENV || 'development') !== 'production') {
+    return;
+  }
+
+  const missing = requiredKeys.filter((key) => !process.env[key]);
+  if (missing.length) {
+    // eslint-disable-next-line no-console
+    console.error(`缺少必要环境变量: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  const smtpRequired = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'];
+  const smtpMissing = smtpRequired.filter((key) => !process.env[key]);
+  if (smtpMissing.length) {
+    // eslint-disable-next-line no-console
+    console.error(`SMTP 配置不完整: ${smtpMissing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 function readTimeoutEnv(key: string, fallback: number): number {
   const value = process.env[key];
   if (!value) {
@@ -15,6 +37,7 @@ function readTimeoutEnv(key: string, fallback: number): number {
 }
 
 async function bootstrap() {
+  ensureRequiredEnv();
   const app = await NestFactory.create(AppModule, { cors: true });
 
   const expressInstance = app.getHttpAdapter().getInstance?.();

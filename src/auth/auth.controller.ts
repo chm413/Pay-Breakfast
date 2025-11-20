@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestResetDto } from './dto/request-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RecheckPasswordDto } from './dto/recheck-password.dto';
+import { SimpleAuthGuard } from '../common/simple-auth.guard';
+import { Request } from 'express';
+type AuthedRequest = Request & { user?: any };
 
 @Controller('auth')
 export class AuthController {
@@ -32,5 +36,12 @@ export class AuthController {
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post('recheck-password')
+  @UseGuards(SimpleAuthGuard)
+  recheckPassword(@Body() dto: RecheckPasswordDto, @Req() req: AuthedRequest) {
+    const userId = Number((req as any).user?.id);
+    return this.authService.recheckPassword(userId, dto.password, dto.encrypted);
   }
 }

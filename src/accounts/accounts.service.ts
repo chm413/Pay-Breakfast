@@ -65,24 +65,30 @@ export class AccountsService {
     source: { type: string; id?: number },
     operatorUserId: number | null,
   ): Promise<BalanceChangeResult> {
-    const account = await this.accountsRepository.findOne({ where: { id: accountId }, relations: ['student', 'student.user'] });
-    if (!account || account.status !== 1) {
-      return { success: false, errorCode: 'ACCOUNT_NOT_AVAILABLE', errorMessage: 'Account not found or inactive' };
-    }
-
-    const oldBalance = Number(account.balance);
-    const creditLimit = Number(account.creditLimit);
-    const newBalance = Number((oldBalance - amount).toFixed(2));
-
-    if (newBalance < -creditLimit) {
-      return { success: false, errorCode: 'INSUFFICIENT_FUNDS', errorMessage: 'Balance below credit limit' };
-    }
-
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();
 
     try {
+      const account = await runner.manager.getRepository(Account).findOne({
+        where: { id: accountId },
+        relations: ['student', 'student.user'],
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!account || account.status !== 1) {
+        await runner.rollbackTransaction();
+        return { success: false, errorCode: 'ACCOUNT_NOT_AVAILABLE', errorMessage: 'Account not found or inactive' };
+      }
+
+      const oldBalance = Number(account.balance);
+      const creditLimit = Number(account.creditLimit);
+      const newBalance = Number((oldBalance - amount).toFixed(2));
+
+      if (newBalance < -creditLimit) {
+        await runner.rollbackTransaction();
+        return { success: false, errorCode: 'INSUFFICIENT_FUNDS', errorMessage: 'Balance below credit limit' };
+      }
+
       account.balance = newBalance.toFixed(2);
       await runner.manager.save(account);
 
@@ -116,19 +122,23 @@ export class AccountsService {
     source: { type: string; id?: number },
     operatorUserId: number | null,
   ): Promise<BalanceChangeResult> {
-    const account = await this.accountsRepository.findOne({ where: { id: accountId }, relations: ['student', 'student.user'] });
-    if (!account || account.status !== 1) {
-      throw new NotFoundException('Account not found or inactive');
-    }
-
-    const oldBalance = Number(account.balance);
-    const newBalance = Number((oldBalance + amount).toFixed(2));
-
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();
 
     try {
+      const account = await runner.manager.getRepository(Account).findOne({
+        where: { id: accountId },
+        relations: ['student', 'student.user'],
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!account || account.status !== 1) {
+        throw new NotFoundException('Account not found or inactive');
+      }
+
+      const oldBalance = Number(account.balance);
+      const newBalance = Number((oldBalance + amount).toFixed(2));
+
       account.balance = newBalance.toFixed(2);
       await runner.manager.save(account);
 

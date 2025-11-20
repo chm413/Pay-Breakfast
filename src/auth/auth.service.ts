@@ -32,6 +32,7 @@ export class AuthService implements OnModuleInit {
   private jwtSecret = getJwtSecret();
   private resetTokens = new Map<string, ResetToken>();
   private mailer?: Transporter;
+  private recentVerified = new Map<number, number>();
 
   constructor(
     @InjectRepository(User)
@@ -133,6 +134,35 @@ export class AuthService implements OnModuleInit {
       .join('');
   }
 
+  markRecentVerification(userId: number) {
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    this.recentVerified.set(userId, expiresAt);
+  }
+
+  hasRecentVerification(userId: number) {
+    const expiresAt = this.recentVerified.get(userId);
+    if (!expiresAt) return false;
+    if (expiresAt < Date.now()) {
+      this.recentVerified.delete(userId);
+      return false;
+    }
+    return true;
+  }
+
+  async recheckPassword(userId: number, password: string, encrypted?: boolean) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user || user.status !== 1) {
+      throw new UnauthorizedException('账号不存在或已被禁用');
+    }
+    const plaintext = this.decryptIfNeeded(password, encrypted);
+    const match = await bcrypt.compare(plaintext, user.passwordHash);
+    if (!match) {
+      throw new UnauthorizedException('密码校验失败');
+    }
+    this.markRecentVerification(user.id);
+    return { success: true };
+  }
+
   private decryptIfNeeded(content: string, encrypted?: boolean): string {
     if (!encrypted) return content;
     try {
@@ -172,6 +202,7 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('账号或密码错误');
     }
 
+    this.markRecentVerification(user.id);
     const userInfo = await this.buildUserInfo(user);
     const accessToken = jwt.sign(userInfo, this.jwtSecret, { expiresIn: '2h' });
     return { accessToken, userInfo };
