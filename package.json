@@ -31,6 +31,12 @@
     "typeorm": "^0.3.27",
     "uuid": "^13.0.0"
   },
+  "overrides": {
+    "glob": "13.0.0",
+    "@nestjs/cli": {
+      "glob": "13.0.0"
+    }
+  },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.9",
