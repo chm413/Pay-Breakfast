@@ -13,7 +13,15 @@
     "incremental": true,
     "strict": true,
     "moduleResolution": "node",
-    "types": ["node"],
+    "types": [
+      "node",
+      "express",
+      "express-rate-limit",
+      "helmet",
+      "jsonwebtoken",
+      "nodemailer",
+      "bcryptjs"
+    ],
     "esModuleInterop": true
   },
   "include": ["src/**/*"],

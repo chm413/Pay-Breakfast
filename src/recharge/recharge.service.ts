@@ -16,6 +16,24 @@ export class RechargeService {
     private readonly accountsService: AccountsService,
   ) {}
 
+  async listRequests(status?: string) {
+    const where = status ? { status } : {};
+    const records = await this.rechargeRequestsRepository.find({
+      where,
+      relations: ['account', 'student'],
+      order: { createdAt: 'DESC' },
+    });
+    return records.map((item) => ({
+      id: item.id,
+      accountId: item.account?.id,
+      studentId: item.student?.id,
+      amount: Number(item.amount),
+      payMethod: item.payMethod,
+      status: item.status,
+      createdAt: item.createdAt,
+    }));
+  }
+
   async createRequest(userId: number, dto: CreateRechargeRequestDto) {
     const request = this.rechargeRequestsRepository.create({
       account: { id: dto.accountId } as any,

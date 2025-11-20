@@ -17,6 +17,18 @@ function readTimeoutEnv(key: string, fallback: number): number {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true });
 
+  const expressInstance = app.getHttpAdapter().getInstance?.();
+  if (expressInstance?.set) {
+    const trustProxy = process.env.TRUST_PROXY;
+    if (trustProxy === 'false' || trustProxy === '0') {
+      expressInstance.set('trust proxy', false);
+    } else {
+      // Default to trusting one proxy (e.g., Nginx/宝塔) so rate limiting can
+      // correctly read the real client IP from X-Forwarded-For and avoid warnings.
+      expressInstance.set('trust proxy', trustProxy ?? 1);
+    }
+  }
+
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(
     rateLimit({

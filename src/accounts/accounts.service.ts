@@ -32,6 +32,29 @@ export class AccountsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async getOrCreatePersonalAccountForUser(userId: number): Promise<Account> {
+    const student = await this.studentsRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['personalAccount', 'personalAccount.student'],
+    });
+
+    if (student?.personalAccount) {
+      return student.personalAccount;
+    }
+
+    const existing = await this.accountsRepository.findOne({ where: { ownerUserId: userId, type: 'personal' } });
+    if (existing) return existing;
+
+    const created = this.accountsRepository.create({
+      type: 'personal',
+      ownerUserId: userId,
+      name: '个人账户',
+      balance: '0.00',
+      creditLimit: '0.00',
+    });
+    return this.accountsRepository.save(created);
+  }
+
   async getPersonalAccountByStudentId(studentId: number): Promise<Account | null> {
     return this.accountsRepository.findOne({ where: { student: { id: studentId }, type: 'personal' }, relations: ['student'] });
   }

@@ -6,6 +6,8 @@ import { ClassOrdersModule } from './class-orders/class-orders.module';
 import { RechargeModule } from './recharge/recharge.module';
 import * as entities from './entities';
 import { NotificationsModule } from './notifications/notifications.module';
+import { UsersModule } from './users/users.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     ClassOrdersModule,
     RechargeModule,
     NotificationsModule,
+    UsersModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

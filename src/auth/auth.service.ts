@@ -17,6 +17,7 @@ import { User } from '../entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { getJwtSecret } from '../common/jwt.util';
 
 interface ResetToken {
   userId: number;
@@ -28,7 +29,7 @@ export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
   private rsaPublicKey!: string;
   private rsaPrivateKey!: string;
-  private jwtSecret = process.env.JWT_SECRET || randomUUID();
+  private jwtSecret = getJwtSecret();
   private resetTokens = new Map<string, ResetToken>();
   private mailer?: Transporter;
 

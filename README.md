@@ -25,6 +25,7 @@ npm run start:dev
   * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
   * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
   * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
+  * 代理部署：`TRUST_PROXY`（默认 `1`，表示信任一层反向代理；设为 `0`/`false` 则关闭）。在 Nginx/宝塔 等代理后部署时保持默认值，可避免限流读取真实 IP 时出现 `X-Forwarded-For` 告警。
   * 安全增强：
     * `RSA_PUBLIC_KEY` / `RSA_PRIVATE_KEY`：如不提供，后端会生成临时密钥对（仅当前运行有效），并在启动日志中输出公钥用于前端 RSA 加密登录/注册。
     * `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_SECURE`、`SMTP_FROM`：配置后可发送找回密码邮件；未配置时会将邮件内容输出到控制台便于人工转发。

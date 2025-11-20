@@ -1,23 +1,35 @@
-import { Body, Controller, Headers, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { CreateRechargeRequestDto } from './dto/create-recharge-request.dto';
 import { ReviewRechargeRequestDto } from './dto/review-recharge-request.dto';
 import { RechargeService } from './recharge.service';
+import { SimpleAuthGuard } from '../common/simple-auth.guard';
+import { Request } from 'express';
+
+type AuthedRequest = Request & { user?: any };
 
 @Controller('recharge-requests')
+@UseGuards(SimpleAuthGuard)
 export class RechargeController {
   constructor(private readonly rechargeService: RechargeService) {}
 
+  @Get()
+  list(@Query('status') status?: string) {
+    return this.rechargeService.listRequests(status);
+  }
+
   @Post()
-  create(@Body() dto: CreateRechargeRequestDto, @Headers('x-user-id') userId: string) {
-    return this.rechargeService.createRequest(Number(userId), dto);
+  create(@Body() dto: CreateRechargeRequestDto, @Req() req: AuthedRequest) {
+    const userId = Number((req as any).user?.id);
+    return this.rechargeService.createRequest(userId, dto);
   }
 
   @Post(':id/review')
   review(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ReviewRechargeRequestDto,
-    @Headers('x-user-id') reviewerId: string,
+    @Req() req: AuthedRequest,
   ) {
-    return this.rechargeService.reviewRequest(id, Number(reviewerId), dto);
+    const reviewerId = Number((req as any).user?.id);
+    return this.rechargeService.reviewRequest(id, reviewerId, dto);
   }
 }
