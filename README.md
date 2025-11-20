@@ -52,7 +52,7 @@ npm run start:dev
 
 ### 前端（React + Vite）
 
-在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录、首页仪表盘、个人中心、管理员充值审核与用户管理。
+在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录/注册/重置密码、自助首页仪表盘、个人中心、管理员充值审核与用户管理。
 
 ```bash
 cd frontend

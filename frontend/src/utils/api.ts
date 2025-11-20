@@ -8,6 +8,13 @@ interface LoginResponse {
   userInfo: UserProfile;
 }
 
+interface RegisterPayload {
+  username: string;
+  realName: string;
+  email: string;
+  password: string;
+}
+
 let cachedPublicKey: string | null = null;
 
 async function fetchPublicKey(): Promise<string> {
@@ -53,6 +60,30 @@ export async function login(username: string, password: string) {
     body: JSON.stringify({ username, password: encryptedPassword, encrypted: true }),
   });
   return data;
+}
+
+export async function registerUser(payload: RegisterPayload) {
+  const encryptedPassword = await encryptSensitive(payload.password);
+  const data = await request<LoginResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, password: encryptedPassword, encrypted: true }),
+  });
+  return data;
+}
+
+export async function requestPasswordReset(email: string) {
+  return request<{ success: boolean }>('/auth/request-reset', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const encryptedPassword = await encryptSensitive(newPassword);
+  return request<{ success: boolean }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword: encryptedPassword, encrypted: true }),
+  });
 }
 
 export async function fetchDashboardSummary() {

@@ -18,7 +18,13 @@ export default function DashboardPage() {
     async function load() {
       try {
         const res = await fetchDashboardSummary();
-        setSummary(res as DashboardSummary);
+        const parsed = res as Partial<DashboardSummary>;
+        setSummary({
+          totalBalance: Number(parsed.totalBalance ?? fallbackSummary.totalBalance),
+          lowBalanceCount: Number(parsed.lowBalanceCount ?? fallbackSummary.lowBalanceCount),
+          todayOrders: Number(parsed.todayOrders ?? fallbackSummary.todayOrders),
+          pendingRecharges: Number(parsed.pendingRecharges ?? fallbackSummary.pendingRecharges),
+        });
       } catch (err) {
         console.warn('Use fallback dashboard summary', err);
         setSummary(fallbackSummary);

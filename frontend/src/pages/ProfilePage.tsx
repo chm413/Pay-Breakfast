@@ -16,8 +16,13 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = (await fetchPersonalAccount()) as { account: AccountInfo };
-        setAccount(res.account);
+        const res = (await fetchPersonalAccount()) as { account: Partial<AccountInfo> };
+        // 防止后端缺少阈值字段导致渲染 toFixed 报错
+        setAccount({
+          balance: res.account.balance ?? 0,
+          reminder_threshold: res.account.reminder_threshold ?? 25,
+          danger_threshold: res.account.danger_threshold ?? 3,
+        });
       } catch (err) {
         console.warn('Use placeholder account', err);
         setError('未能加载账户信息，以下为示例数据');
@@ -26,6 +31,9 @@ export default function ProfilePage() {
     }
     load();
   }, []);
+
+  const formatAmount = (value: number | undefined) =>
+    typeof value === 'number' ? value.toFixed(2) : '—';
 
   return (
     <div className="card">
@@ -56,7 +64,7 @@ export default function ProfilePage() {
         <div style={{ fontSize: 14 }}>个人账户余额</div>
         <div style={{ fontSize: 32, fontWeight: 800, marginTop: 4 }}>¥ {account?.balance?.toFixed(2) ?? '—'}</div>
         <div style={{ opacity: 0.9, fontSize: 13 }}>
-          提醒阈值 ¥{account?.reminder_threshold.toFixed(2)} · 危急阈值 ¥{account?.danger_threshold.toFixed(2)}
+          提醒阈值 ¥{formatAmount(account?.reminder_threshold)} · 危急阈值 ¥{formatAmount(account?.danger_threshold)}
         </div>
       </div>
 

@@ -16,7 +16,12 @@ export default function RechargeReviewPage() {
     async function load() {
       try {
         const res = (await fetchRechargeRequests()) as RechargeRequestItem[];
-        setItems(res);
+        setItems(
+          res.map((item) => ({
+            ...item,
+            amount: Number(item.amount ?? 0),
+          }))
+        );
       } catch (err) {
         console.warn('Use mock recharge list', err);
         setItems(mockRecharges);
