@@ -14,3 +14,4 @@ export { RechargeRequest } from './recharge-request.entity';
 export { RiskEvent } from './risk-event.entity';
 export { Notification } from './notification.entity';
 export { DormantAccountReport } from './dormant-account-report.entity';
+export { EmailVerificationCode } from './email-verification-code.entity';

@@ -17,6 +17,10 @@ export class RegisterDto {
   @IsNotEmpty()
   password!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+
   @IsOptional()
   @IsBoolean()
   encrypted?: boolean;

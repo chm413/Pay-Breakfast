@@ -7,6 +7,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RecheckPasswordDto } from './dto/recheck-password.dto';
 import { SimpleAuthGuard } from '../common/simple-auth.guard';
 import { Request } from 'express';
+import { RequestRegisterCodeDto } from './dto/request-register-code.dto';
 type AuthedRequest = Request & { user?: any };
 
 @Controller('auth')
@@ -26,6 +27,11 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('register/request-code')
+  requestRegisterCode(@Body() dto: RequestRegisterCodeDto) {
+    return this.authService.requestRegisterCode(dto.email);
   }
 
   @Post('request-reset')

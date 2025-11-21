@@ -12,6 +12,7 @@ interface RegisterPayload {
   username: string;
   realName: string;
   email: string;
+  code: string;
   password: string;
 }
 
@@ -69,6 +70,13 @@ export async function registerUser(payload: RegisterPayload) {
     body: JSON.stringify({ ...payload, password: encryptedPassword, encrypted: true }),
   });
   return data;
+}
+
+export async function requestRegisterCode(email: string) {
+  return request<{ success: boolean }>('/auth/register/request-code', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
 }
 
 export async function requestPasswordReset(email: string) {

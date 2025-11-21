@@ -67,6 +67,7 @@ npm run preview      # 预览产物
 * **GitHub Pages 发布**：Vite 已设置 `base: './'` 便于静态托管。可在 GitHub Actions 或本地执行 `npm run build`，将 `frontend/dist` 推送到 `gh-pages` 分支后在仓库 Settings → Pages 选择该分支，即可生成公开访问地址。
 * **页面组成**：
   * **登录页**：支持账号密码登录并缓存 JWT。
+  * **注册流程**：需先通过 `/auth/register/request-code` 获取邮箱验证码，再提交注册表单（密码与验证码均经 RSA 保护）。
   * **仪表盘**：展示账户余额总览、低余额统计、班级批量下单趋势示例。
   * **个人中心**：显示当前用户信息与个人账户余额阈值。
   * **充值审核**：列出待审核充值请求，可通过/拒绝。

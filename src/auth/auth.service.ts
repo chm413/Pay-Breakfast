@@ -18,6 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { getJwtSecret } from '../common/jwt.util';
+import { EmailVerificationCode } from '../entities/email-verification-code.entity';
 
 interface ResetToken {
   userId: number;
@@ -41,6 +42,8 @@ export class AuthService implements OnModuleInit {
     private readonly rolesRepository: Repository<Role>,
     @InjectRepository(UserRole)
     private readonly userRolesRepository: Repository<UserRole>,
+    @InjectRepository(EmailVerificationCode)
+    private readonly emailCodesRepository: Repository<EmailVerificationCode>,
   ) {}
 
   async onModuleInit() {
@@ -215,6 +218,13 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('用户名已存在');
     }
 
+    const emailExists = await this.usersRepository.findOne({ where: { email: dto.email } });
+    if (emailExists) {
+      throw new BadRequestException('邮箱已注册');
+    }
+
+    await this.assertValidRegisterCode(dto.email, dto.code);
+
     let studentRole = await this.rolesRepository.findOne({ where: { code: 'STUDENT' } });
     if (!studentRole) {
       studentRole = await this.rolesRepository.save(this.rolesRepository.create({ code: 'STUDENT', name: '学生' }));
@@ -230,6 +240,7 @@ export class AuthService implements OnModuleInit {
     const saved = await this.usersRepository.save(user);
     const link = this.userRolesRepository.create({ user: saved, role: studentRole });
     await this.userRolesRepository.save(link);
+    await this.consumeRegisterCode(dto.email, dto.code);
 
     const userInfo = await this.buildUserInfo({ ...saved, roles: [link] } as User);
     const accessToken = jwt.sign(userInfo, this.jwtSecret, { expiresIn: '2h' });
@@ -279,5 +290,49 @@ export class AuthService implements OnModuleInit {
       return;
     }
     this.logger.warn(`SMTP 未配置，邮件内容将输出到日志：To=${to}, Subject=${subject}, Body=${text}`);
+  }
+
+  async requestRegisterCode(email: string) {
+    const existingUser = await this.usersRepository.findOne({ where: { email } });
+    if (existingUser) {
+      throw new BadRequestException('邮箱已注册，请直接登录或找回密码');
+    }
+
+    const recent = await this.emailCodesRepository.findOne({
+      where: { email, purpose: 'REGISTER' },
+      order: { createdAt: 'DESC' },
+    });
+    if (recent && recent.createdAt.getTime() > Date.now() - 60 * 1000) {
+      throw new BadRequestException('请求过于频繁，请稍后再试');
+    }
+
+    const code = this.generateNumericCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await this.emailCodesRepository.save(
+      this.emailCodesRepository.create({ email, code, purpose: 'REGISTER', expiresAt }),
+    );
+
+    await this.dispatchEmail(email, '注册验证码', `您的注册验证码为：${code}，10 分钟内有效。`);
+    return { success: true, expiresAt };
+  }
+
+  private generateNumericCode(length = 6) {
+    return Array.from({ length })
+      .map(() => Math.floor(Math.random() * 10))
+      .join('');
+  }
+
+  private async assertValidRegisterCode(email: string, code: string) {
+    const record = await this.emailCodesRepository.findOne({
+      where: { email, purpose: 'REGISTER' },
+      order: { createdAt: 'DESC' },
+    });
+    if (!record || record.code !== code || record.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('验证码错误或已过期');
+    }
+  }
+
+  private async consumeRegisterCode(email: string, code: string) {
+    await this.emailCodesRepository.delete({ email, code, purpose: 'REGISTER' });
   }
 }

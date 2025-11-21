@@ -1,6 +1,6 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { login, registerUser, requestPasswordReset, resetPassword } from '../utils/api';
+import { login, registerUser, requestPasswordReset, requestRegisterCode, resetPassword } from '../utils/api';
 import { useAuth } from '../state/AuthContext';
 
 type Mode = 'login' | 'register' | 'reset';
@@ -11,11 +11,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [realName, setRealName] = useState('');
   const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [info, setInfo] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [codeCooldown, setCodeCooldown] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { login: saveLogin } = useAuth();
@@ -27,6 +30,34 @@ export default function LoginPage() {
     setError('');
     setInfo('');
     setLoading(false);
+    setSendingCode(false);
+    setCodeCooldown(0);
+  }
+
+  useEffect(() => {
+    if (codeCooldown <= 0) return;
+    const timer = setTimeout(() => setCodeCooldown((prev) => (prev > 0 ? prev - 1 : 0)), 1000);
+    return () => clearTimeout(timer);
+  }, [codeCooldown]);
+
+  async function handleSendRegisterCode() {
+    if (!email) {
+      setError('请填写邮箱以接收验证码');
+      return;
+    }
+    setSendingCode(true);
+    setError('');
+    setInfo('');
+    try {
+      await requestRegisterCode(email);
+      setInfo('验证码已发送，请在 10 分钟内完成注册');
+      setCodeCooldown(60);
+    } catch (err) {
+      console.error(err);
+      setError('发送验证码失败，请稍后重试或检查邮箱是否已注册');
+    } finally {
+      setSendingCode(false);
+    }
   }
 
   async function handleResetRequest() {
@@ -59,7 +90,12 @@ export default function LoginPage() {
         saveLogin({ token: res.accessToken, user: res.userInfo });
         navigate(from, { replace: true });
       } else if (mode === 'register') {
-        const res = await registerUser({ username, password, realName, email });
+        if (!verificationCode) {
+          setError('请填写邮箱验证码后再注册');
+          setLoading(false);
+          return;
+        }
+        const res = await registerUser({ username, password, realName, email, code: verificationCode });
         saveLogin({ token: res.accessToken, user: res.userInfo });
         setInfo('注册成功，已为您自动登录');
         navigate('/', { replace: true });
@@ -109,13 +145,6 @@ export default function LoginPage() {
             />
           </label>
 
-          {mode === 'register' && (
-            <label>
-              <div>真实姓名</div>
-              <input className="input" value={realName} onChange={(e) => setRealName(e.target.value)} placeholder="请填写姓名" required />
-            </label>
-          )}
-
           {mode !== 'login' && (
             <label>
               <div>邮箱</div>
@@ -127,6 +156,42 @@ export default function LoginPage() {
                 placeholder="用于接收验证码或通知"
                 required
               />
+            </label>
+          )}
+
+          {mode === 'register' && (
+            <>
+              <label>
+                <div>邮箱验证码</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="input"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    placeholder="请输入邮箱收到的验证码"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={handleSendRegisterCode}
+                    disabled={sendingCode || codeCooldown > 0 || !email}
+                    style={{ minWidth: 120 }}
+                  >
+                    {codeCooldown > 0 ? `重发(${codeCooldown}s)` : '获取验证码'}
+                  </button>
+                </div>
+              </label>
+              <p style={{ color: '#475569', fontSize: 13, marginTop: 4 }}>
+                注册需邮箱验证，请在 10 分钟内使用验证码完成注册。
+              </p>
+            </>
+          )}
+
+          {mode === 'register' && (
+            <label>
+              <div>真实姓名</div>
+              <input className="input" value={realName} onChange={(e) => setRealName(e.target.value)} placeholder="请填写姓名" required />
             </label>
           )}
 
