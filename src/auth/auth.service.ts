@@ -324,10 +324,16 @@ export class AuthService implements OnModuleInit {
 
   private async assertValidRegisterCode(email: string, code: string) {
     const record = await this.emailCodesRepository.findOne({
-      where: { email, purpose: 'REGISTER' },
+      where: { email, purpose: 'REGISTER', code },
       order: { createdAt: 'DESC' },
     });
-    if (!record || record.code !== code || record.expiresAt.getTime() < Date.now()) {
+    const expiresAt = record?.expiresAt
+      ? record.expiresAt instanceof Date
+        ? record.expiresAt
+        : new Date(record.expiresAt)
+      : null;
+
+    if (!record || !expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
       throw new BadRequestException('验证码错误或已过期');
     }
   }

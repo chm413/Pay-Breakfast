@@ -1,29 +1,16 @@
 const path = require('path');
 const dotenvPath = process.env.ENV_FILE || path.resolve(__dirname, '.env');
 
-// Load .env before PM2 injects env vars, so a single file can hold all values.
-require('dotenv').config({ path: dotenvPath });
+// Load .env first so PM2 picks up every key defined there.
+const dotenvResult = require('dotenv').config({ path: dotenvPath });
+if (dotenvResult.error) {
+  console.warn('[ecosystem] No .env file found at', dotenvPath, '- relying on process environment.');
+}
 
-const baseEnv = {
-  NODE_ENV: process.env.NODE_ENV || 'production',
-  PORT: process.env.PORT || 3000,
-  DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  DB_PORT: process.env.DB_PORT || 3306,
-  DB_USERNAME: process.env.DB_USERNAME || 'pay_breakfast',
-  DB_PASSWORD: process.env.DB_PASSWORD || 'password',
-  DB_NAME: process.env.DB_NAME || 'pay_breakfast',
-  DB_CHARSET: process.env.DB_CHARSET || 'utf8mb4_unicode_ci',
-  DB_TIMEZONE: process.env.DB_TIMEZONE || 'Z',
-  JWT_SECRET: process.env.JWT_SECRET || 'change_this_secret',
-  // Optional security/email extras
-  RSA_PRIVATE_KEY: process.env.RSA_PRIVATE_KEY,
-  RSA_PUBLIC_KEY: process.env.RSA_PUBLIC_KEY,
-  SMTP_HOST: process.env.SMTP_HOST,
-  SMTP_PORT: process.env.SMTP_PORT,
-  SMTP_USER: process.env.SMTP_USER,
-  SMTP_PASS: process.env.SMTP_PASS,
-  TRUST_PROXY: process.env.TRUST_PROXY || '1',
-};
+// Mirror every variable (including those injected by PM2 or the shell) so the
+// runtime sees exactly what is present in .env / ENV_FILE. Defaults should live
+// in .env, not in this file.
+const baseEnv = { ...process.env };
 
 module.exports = {
   apps: [
