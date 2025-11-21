@@ -3,11 +3,43 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { NextFunction, Request, Response } from 'express';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { AppModule } from './app.module';
 
-const envFilePath = process.env.ENV_FILE || path.resolve(__dirname, '..', '.env');
-dotenv.config({ path: envFilePath });
+const envSearchOrder = (() => {
+  const files: string[] = [];
+  if (process.env.ENV_FILE) {
+    files.push(path.resolve(process.env.ENV_FILE));
+  }
+
+  // Prefer the project root (process.cwd) and the compiled root (dist/..),
+  // plus a local override file if present.
+  const projectRootEnv = path.resolve(process.cwd(), '.env');
+  const compiledRootEnv = path.resolve(__dirname, '..', '.env');
+  const projectLocalEnv = path.resolve(process.cwd(), '.env.local');
+
+  [projectLocalEnv, projectRootEnv, compiledRootEnv].forEach((p) => {
+    if (!files.includes(p)) {
+      files.push(p);
+    }
+  });
+
+  return files;
+})();
+
+let loadedEnvCount = 0;
+envSearchOrder.forEach((filePath) => {
+  if (fs.existsSync(filePath)) {
+    const result = dotenv.config({ path: filePath });
+    loadedEnvCount += Object.keys(result.parsed || {}).length;
+  }
+});
+
+if (loadedEnvCount === 0) {
+  // eslint-disable-next-line no-console
+  console.warn('未找到 .env 配置文件，正在使用进程环境变量。');
+}
 
 function ensureRequiredEnv() {
   const requiredKeys = ['DB_HOST', 'DB_PASSWORD', 'JWT_SECRET'];
