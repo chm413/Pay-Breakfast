@@ -13,7 +13,7 @@ npm run start:dev
 
 1. **准备运行环境**：Node.js 18+、MySQL 5.7.43+（兼容 8.x），并创建数据库（默认名 `pay_breakfast`）。
 2. **安装依赖**：在项目根目录执行 `npm install`。
-3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
+3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。变量较多时，可在项目根目录创建 `.env` 文件集中维护，也可通过 `ENV_FILE` 指定自定义路径，服务启动会自动读取。
 4. **编译代码**：执行 `npm run build`，生成 `dist/` 产物。
 5. **启动服务**：使用 `npm start` 运行编译后的服务（如需后台常驻可结合 pm2/systemd）。
 

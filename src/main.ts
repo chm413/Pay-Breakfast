@@ -2,7 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { NextFunction, Request, Response } from 'express';
+import dotenv from 'dotenv';
+import path from 'path';
 import { AppModule } from './app.module';
+
+const envFilePath = process.env.ENV_FILE || path.resolve(__dirname, '..', '.env');
+dotenv.config({ path: envFilePath });
 
 function ensureRequiredEnv() {
   const requiredKeys = ['DB_HOST', 'DB_PASSWORD', 'JWT_SECRET'];
