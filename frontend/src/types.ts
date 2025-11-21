@@ -7,6 +7,24 @@ export interface UserProfile {
   className?: string;
 }
 
+export interface BreakfastCategory {
+  id: number;
+  name: string;
+  sortOrder: number;
+  enabled: boolean;
+}
+
+export interface BreakfastProduct {
+  id: number;
+  categoryId: number;
+  categoryName?: string;
+  name: string;
+  price: number;
+  unit: string;
+  enabled: boolean;
+  remark?: string | null;
+}
+
 export interface RechargeRequestItem {
   id: number;
   studentName: string;

@@ -2,11 +2,6 @@ import { useEffect, useState } from 'react';
 import { RechargeRequestItem } from '../types';
 import { fetchRechargeRequests, reviewRecharge } from '../utils/api';
 
-const mockRecharges: RechargeRequestItem[] = [
-  { id: 1, studentName: '张同学', amount: 50, payMethod: 'WECHAT', status: 'pending', createdAt: '2024-01-01' },
-  { id: 2, studentName: '李同学', amount: 80, payMethod: 'ALIPAY', status: 'pending', createdAt: '2024-01-01' },
-];
-
 export default function RechargeReviewPage() {
   const [items, setItems] = useState<RechargeRequestItem[]>([]);
   const [error, setError] = useState('');
@@ -22,10 +17,9 @@ export default function RechargeReviewPage() {
             amount: Number(item.amount ?? 0),
           }))
         );
-      } catch (err) {
-        console.warn('Use mock recharge list', err);
-        setItems(mockRecharges);
-        setError('接口不可用，展示示例充值申请');
+        setError('');
+      } catch (err: any) {
+        setError(err?.message || '充值列表加载失败');
       } finally {
         setLoading(false);
       }
