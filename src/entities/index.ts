@@ -15,3 +15,7 @@ export { RiskEvent } from './risk-event.entity';
 export { Notification } from './notification.entity';
 export { DormantAccountReport } from './dormant-account-report.entity';
 export { EmailVerificationCode } from './email-verification-code.entity';
+export { BreakfastCategory } from './breakfast-category.entity';
+export { BreakfastProduct } from './breakfast-product.entity';
+export { Order } from './order.entity';
+export { OrderItem } from './order-item.entity';

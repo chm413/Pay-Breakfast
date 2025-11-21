@@ -51,6 +51,36 @@ npm run start:dev
   * 后端启动时若不存在超级管理员，会生成随机密码并输出到控制台，请及时使用并修改。
   * 生产环境下启动会校验 `DB_HOST`/`DB_PASSWORD`/`JWT_SECRET` 以及 SMTP 相关变量是否配置完整，缺失则直接终止启动；批量下单、充值审核等敏感操作需携带 `confirm=true` 且在 15 分钟内完成 `/auth/recheck-password` 校验，避免误操作或被借用会话滥用。
 
+#### 环境变量一览（格式示例）
+
+| 变量 | 说明 | 格式/示例 | 必填 | 默认值 |
+| --- | --- | --- | --- | --- |
+| `PORT` | HTTP 监听端口 | `3000` | 否 | `3000` |
+| `JWT_SECRET` | JWT 签发秘钥 | 随机字符串，例如 `s3cure-r4nd0m` | 是 | - |
+| `DB_HOST` | 数据库地址 | `127.0.0.1` | 是 | - |
+| `DB_PORT` | 数据库端口 | `3306` | 是 | - |
+| `DB_USERNAME` | 数据库用户名 | `pay_user` | 是 | - |
+| `DB_PASSWORD` | 数据库密码 | `your_password` | 是 | - |
+| `DB_NAME` | 数据库名 | `pay_breakfast` | 是 | - |
+| `DB_CHARSET` | 字符集/排序规则 | `utf8mb4_unicode_ci` | 否 | `utf8mb4_unicode_ci` |
+| `DB_TIMEZONE` | 数据库时区 | `+00:00` 或 `Z` | 否 | `+00:00` |
+| `TRUST_PROXY` | 是否信任反向代理层 | `1` / `true` / `false` | 否 | `1` |
+| `RSA_PUBLIC_KEY` | RSA 公钥（PEM） | `-----BEGIN PUBLIC KEY-----...` | 否 | 运行时自动生成 |
+| `RSA_PRIVATE_KEY` | RSA 私钥（PEM） | `-----BEGIN PRIVATE KEY-----...` | 否 | 运行时自动生成 |
+| `SMTP_HOST` | SMTP 服务器 | `smtp.qq.com` | 否（启用邮件必填） | - |
+| `SMTP_PORT` | SMTP 端口 | `465` 或 `587` | 否（启用邮件必填） | - |
+| `SMTP_USER` | SMTP 用户名 | `user@example.com` | 否（启用邮件必填） | - |
+| `SMTP_PASS` | SMTP 密码/授权码 | `app_password` | 否（启用邮件必填） | - |
+| `SMTP_SECURE` | SMTP 是否 SSL | `true`/`false` | 否 | `true` |
+| `SMTP_FROM` | 邮件 From | `"Breakfast" <noreply@example.com>` | 否（启用邮件必填） | - |
+| `HTTP_KEEP_ALIVE_TIMEOUT` | Node keep-alive 毫秒 | `65000` | 否 | `65000` |
+| `HTTP_HEADERS_TIMEOUT` | Headers timeout 毫秒 | `66000` | 否 | `66000` |
+| `HTTP_REQUEST_TIMEOUT` | 请求超时毫秒 | `60000` | 否 | `60000` |
+| `DEFAULT_ADMIN_USERNAME` | 初始管理员用户名 | `admin` | 否 | `admin` |
+| `ADMIN_EMAIL` | 初始管理员邮箱 | `owner@example.com` | 否 | - |
+| `AUTO_BLOCK_ON_DANGER_DEBT` | 危险欠款是否自动禁单 | `true`/`false` | 否 | `true` |
+| `DANGER_DEBT_THRESHOLD` | 危险欠款阈值 | `30`（表示欠 30 元时警告） | 否 | 账户透支额度 |
+
 ### 前端（React + Vite）
 
 在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录/注册/重置密码、自助首页仪表盘、个人中心、管理员充值审核与用户管理。

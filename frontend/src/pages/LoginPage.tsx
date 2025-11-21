@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { login, registerUser, requestPasswordReset, requestRegisterCode, resetPassword } from '../utils/api';
+import { login, registerUser, requestPasswordReset, requestRegisterCode, resetPassword, fetchPublicHighlights } from '../utils/api';
+import { PublicHighlights } from '../types';
 import { useAuth } from '../state/AuthContext';
 
 type Mode = 'login' | 'register' | 'reset';
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [codeCooldown, setCodeCooldown] = useState(0);
+  const [highlights, setHighlights] = useState<PublicHighlights | null>(null);
+  const [highlightError, setHighlightError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const { login: saveLogin } = useAuth();
@@ -39,6 +42,20 @@ export default function LoginPage() {
     const timer = setTimeout(() => setCodeCooldown((prev) => (prev > 0 ? prev - 1 : 0)), 1000);
     return () => clearTimeout(timer);
   }, [codeCooldown]);
+
+  useEffect(() => {
+    async function loadHighlights() {
+      try {
+        const res = await fetchPublicHighlights();
+        setHighlights(res);
+        setHighlightError('');
+      } catch (err: any) {
+        const detail = err?.message || '后端接口不可用';
+        setHighlightError(`无法获取站点数据：${detail}。请截图并联系站点管理员。`);
+      }
+    }
+    loadHighlights();
+  }, []);
 
   async function handleSendRegisterCode() {
     if (!email) {
@@ -113,8 +130,51 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 480 }}>
-      <div className="card">
+    <div className="container" style={{ maxWidth: 960 }}>
+      <div className="card" style={{ marginBottom: 16, background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', color: '#fff' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', fontWeight: 700 }}>
+              <span>鸿铭外卖服务平台</span>
+              <span style={{ fontSize: 12 }}>安全·便捷·账本隔离</span>
+            </div>
+            <h2 style={{ margin: '10px 0 4px' }}>早点下单与账户服务</h2>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.86)' }}>
+              支持个人下单、批量下单、充值审核与余额安全提醒，全程 RSA 加密与 SMTP 找回密码保护。
+            </p>
+            {highlightError && (
+              <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(248,113,113,0.12)', color: '#fee2e2' }}>
+                {highlightError}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 12 }}>
+            {highlights ? (
+              <>
+                <StatPill label="近7天日均单量" value={`${highlights.averageDailyOrders} 笔/天`} />
+                <StatPill label="近7天总单量" value={`${highlights.totalOrdersLast7Days} 笔`} />
+                <StatPill label="近7天成交额" value={`¥ ${highlights.totalAmountLast7Days.toFixed(2)}`} />
+                <StatPill
+                  label="热门商品ID"
+                  value={
+                    highlights.topProducts.length > 0
+                      ? highlights.topProducts
+                          .map((p) => `#${p.productId} x${p.orders}`)
+                          .join('、')
+                      : '暂无数据'
+                  }
+                />
+              </>
+            ) : (
+              <>
+                <PlaceholderPill text="正在同步统计..." />
+                <PlaceholderPill text="请稍候" />
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="card" style={{ maxWidth: 520, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0 }}>欢迎使用</h2>
@@ -258,6 +318,25 @@ export default function LoginPage() {
           敏感字段已通过 RSA 加密传输，注册及找回密码均由前端直连后端完成。
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card" style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)' }}>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.82)' }}>{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 22 }}>{value}</div>
+      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>数据来自后端实时汇总</div>
+    </div>
+  );
+}
+
+function PlaceholderPill({ text }: { text: string }) {
+  return (
+    <div className="card" style={{ border: '1px dashed rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)' }}>
+      <div style={{ fontWeight: 700 }}>{text}</div>
+      <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13 }}>等待后端接口响应</div>
     </div>
   );
 }

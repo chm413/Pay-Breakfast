@@ -29,6 +29,9 @@ export class User {
   @Column({ length: 128, nullable: true })
   email?: string;
 
+  @Column({ name: 'class_or_dorm', length: 128, nullable: true })
+  classOrDorm?: string;
+
   @Column({ type: 'tinyint', default: 1 })
   status!: number;
 

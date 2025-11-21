@@ -8,6 +8,8 @@ import * as entities from './entities';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UsersModule } from './users/users.module';
 import { ReportsModule } from './reports/reports.module';
+import { BreakfastModule } from './breakfast/breakfast.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { ReportsModule } from './reports/reports.module';
     NotificationsModule,
     UsersModule,
     ReportsModule,
+    BreakfastModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

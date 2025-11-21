@@ -2,13 +2,6 @@ import { useEffect, useState } from 'react';
 import { DashboardSummary } from '../types';
 import { fetchDashboardSummary } from '../utils/api';
 
-const fallbackSummary: DashboardSummary = {
-  totalBalance: 128930.5,
-  lowBalanceCount: 12,
-  todayOrders: 342,
-  pendingRecharges: 7,
-};
-
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,15 +13,16 @@ export default function DashboardPage() {
         const res = await fetchDashboardSummary();
         const parsed = res as Partial<DashboardSummary>;
         setSummary({
-          totalBalance: Number(parsed.totalBalance ?? fallbackSummary.totalBalance),
-          lowBalanceCount: Number(parsed.lowBalanceCount ?? fallbackSummary.lowBalanceCount),
-          todayOrders: Number(parsed.todayOrders ?? fallbackSummary.todayOrders),
-          pendingRecharges: Number(parsed.pendingRecharges ?? fallbackSummary.pendingRecharges),
+          totalBalance: Number(parsed.totalBalance ?? 0),
+          lowBalanceCount: Number(parsed.lowBalanceCount ?? 0),
+          todayOrders: Number(parsed.todayOrders ?? 0),
+          pendingRecharges: Number(parsed.pendingRecharges ?? 0),
         });
-      } catch (err) {
-        console.warn('Use fallback dashboard summary', err);
-        setSummary(fallbackSummary);
-        setError('无法从接口获取报表，展示预置数据');
+        setError('');
+      } catch (err: any) {
+        setSummary(null);
+        const detail = err?.message || '后端接口异常';
+        setError(`无法获取后台报表：${detail}。请截图并联系站点管理员。`);
       } finally {
         setLoading(false);
       }
@@ -42,14 +36,18 @@ export default function DashboardPage() {
         <h3>总览</h3>
         {error && <span className="tag">{error}</span>}
       </div>
-      {loading || !summary ? (
-        <div className="card">数据加载中...</div>
-      ) : (
+      {loading ? <div className="card">数据加载中...</div> : null}
+      {!loading && summary && (
         <div className="flex-grid">
           <SummaryCard title="个人账户总余额" value={`¥ ${summary.totalBalance.toFixed(2)}`} highlight />
           <SummaryCard title="余额不足学生" value={`${summary.lowBalanceCount} 人`} />
           <SummaryCard title="今日消费订单" value={`${summary.todayOrders} 笔`} />
           <SummaryCard title="待审核充值" value={`${summary.pendingRecharges} 条`} />
+        </div>
+      )}
+      {!loading && !summary && (
+        <div className="card" style={{ color: '#b91c1c' }}>
+          无法展示仪表盘统计，请检查后端接口是否可用并联系管理员。
         </div>
       )}
 
