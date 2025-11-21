@@ -1,2 +1,225 @@
 # Pay-Breakfast
-早餐计费和统计订单，以及余额和储值管理
+
+基于 NestJS + TypeORM 的校园早餐计费、账户和班级批量下单后端样例实现。项目遵循需求文档中的数据模型，提供账户扣款、班级批量下单、线下充值申请审核等核心服务骨架，便于前端或小程序进行 JWT 鉴权后的 API 调用。
+
+## 快速开始
+
+```bash
+npm install
+npm run start:dev
+```
+
+## 部署指南
+
+1. **准备运行环境**：Node.js 18+、MySQL 5.7.43+（兼容 8.x），并创建数据库（默认名 `pay_breakfast`）。
+2. **安装依赖**：在项目根目录执行 `npm install`。
+3. **配置环境变量**：设置 `DB_HOST`、`DB_PORT`、`DB_USERNAME`、`DB_PASSWORD`、`DB_NAME` 指向生产库（如需修改监听端口可设置 `PORT`）。
+4. **编译代码**：执行 `npm run build`，生成 `dist/` 产物。
+5. **启动服务**：使用 `npm start` 运行编译后的服务（如需后台常驻可结合 pm2/systemd）。
+
+> 默认开启 TypeORM `synchronize` 方便演示，生产环境建议关闭并使用迁移以避免意外结构变更。
+
+### 生产部署与后端对接
+
+* **必填环境变量**（可写入 `.env` 或 PM2 环境配置）：
+  * `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME`
+  * `PORT`（默认 3000），`JWT_SECRET`（自行生成随机字符串）
+  * 可选：`DB_CHARSET`、`DB_TIMEZONE` 用于兼容旧版本 MySQL 的字符集与时区。
+  * 代理部署：`TRUST_PROXY`（默认 `1`，表示信任一层反向代理；设为 `0`/`false` 则关闭）。在 Nginx/宝塔 等代理后部署时保持默认值，可避免限流读取真实 IP 时出现 `X-Forwarded-For` 告警。
+  * 安全增强：
+    * `RSA_PUBLIC_KEY` / `RSA_PRIVATE_KEY`：如不提供，后端会生成临时密钥对（仅当前运行有效），并在启动日志中输出公钥用于前端 RSA 加密登录/注册。
+    * `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_SECURE`、`SMTP_FROM`：配置后可发送找回密码邮件；未配置时会将邮件内容输出到控制台便于人工转发。
+    * `DEFAULT_ADMIN_USERNAME`（默认 `admin`）、`ADMIN_EMAIL`：首次启动无管理员时会自动创建超级管理员并在日志打印随机密码，登录后请立即修改。
+* **构建与启动**：
+  ```bash
+  npm install
+  npm run build
+  PORT=3000 DB_HOST=127.0.0.1 DB_PORT=3306 npm start
+  ```
+* **常见对接方式**：
+  * 如果前端部署在 GitHub Pages 或其他静态托管，需在前端构建时将 `VITE_API_BASE_URL` 指向可公网访问的后端域名，例如 `https://api.example.com`。
+  * 反向代理时，确保将 `/` 或 `/api` 路径转发到 NestJS 服务监听的端口，并允许跨域（可在 NestJS 中启用 `app.enableCors()`）。
+  * 数据库需允许应用服务器访问：生产环境推荐通过私网/VPC 连接并开启最小权限账户。
+  * 如果代理（Nginx/宝塔）报 `502 upstream prematurely closed connection while reading response header from upstream`，可调整后端的 keep-alive 相关环境变量：
+    * `HTTP_KEEP_ALIVE_TIMEOUT`（默认 65000 ms）
+    * `HTTP_HEADERS_TIMEOUT`（默认 66000 ms）
+    * `HTTP_REQUEST_TIMEOUT`（默认 60000 ms）
+    调整为不低于反向代理的 `proxy_read_timeout`/`keepalive_timeout`，即可避免 502。
+* **安全加固**：
+  * 全局启用 Helmet、WAF 关键字过滤与限流，`/auth` 路径额外防爆破。若需更高并发，可通过环境变量提升代理的限流上限或调整代码中的 `max` 值。
+  * 前端登录/注册/重置密码等敏感字段会使用后端提供的 RSA 公钥加密，确保传输安全。
+  * 后端启动时若不存在超级管理员，会生成随机密码并输出到控制台，请及时使用并修改。
+  * 生产环境下启动会校验 `DB_HOST`/`DB_PASSWORD`/`JWT_SECRET` 以及 SMTP 相关变量是否配置完整，缺失则直接终止启动；批量下单、充值审核等敏感操作需携带 `confirm=true` 且在 15 分钟内完成 `/auth/recheck-password` 校验，避免误操作或被借用会话滥用。
+
+#### 环境变量一览（格式示例）
+
+| 变量 | 说明 | 格式/示例 | 必填 | 默认值 |
+| --- | --- | --- | --- | --- |
+| `PORT` | HTTP 监听端口 | `3000` | 否 | `3000` |
+| `JWT_SECRET` | JWT 签发秘钥 | 随机字符串，例如 `s3cure-r4nd0m` | 是 | - |
+| `DB_HOST` | 数据库地址 | `127.0.0.1` | 是 | - |
+| `DB_PORT` | 数据库端口 | `3306` | 是 | - |
+| `DB_USERNAME` | 数据库用户名 | `pay_user` | 是 | - |
+| `DB_PASSWORD` | 数据库密码 | `your_password` | 是 | - |
+| `DB_NAME` | 数据库名 | `pay_breakfast` | 是 | - |
+| `DB_CHARSET` | 字符集/排序规则 | `utf8mb4_unicode_ci` | 否 | `utf8mb4_unicode_ci` |
+| `DB_TIMEZONE` | 数据库时区 | `+00:00` 或 `Z` | 否 | `+00:00` |
+| `TRUST_PROXY` | 是否信任反向代理层 | `1` / `true` / `false` | 否 | `1` |
+| `RSA_PUBLIC_KEY` | RSA 公钥（PEM） | `-----BEGIN PUBLIC KEY-----...` | 否 | 运行时自动生成 |
+| `RSA_PRIVATE_KEY` | RSA 私钥（PEM） | `-----BEGIN PRIVATE KEY-----...` | 否 | 运行时自动生成 |
+| `SMTP_HOST` | SMTP 服务器 | `smtp.qq.com` | 否（启用邮件必填） | - |
+| `SMTP_PORT` | SMTP 端口 | `465` 或 `587` | 否（启用邮件必填） | - |
+| `SMTP_USER` | SMTP 用户名 | `user@example.com` | 否（启用邮件必填） | - |
+| `SMTP_PASS` | SMTP 密码/授权码 | `app_password` | 否（启用邮件必填） | - |
+| `SMTP_SECURE` | SMTP 是否 SSL | `true`/`false` | 否 | `true` |
+| `SMTP_FROM` | 邮件 From | `"Breakfast" <noreply@example.com>` | 否（启用邮件必填） | - |
+| `HTTP_KEEP_ALIVE_TIMEOUT` | Node keep-alive 毫秒 | `65000` | 否 | `65000` |
+| `HTTP_HEADERS_TIMEOUT` | Headers timeout 毫秒 | `66000` | 否 | `66000` |
+| `HTTP_REQUEST_TIMEOUT` | 请求超时毫秒 | `60000` | 否 | `60000` |
+| `DEFAULT_ADMIN_USERNAME` | 初始管理员用户名 | `admin` | 否 | `admin` |
+| `ADMIN_EMAIL` | 初始管理员邮箱 | `owner@example.com` | 否 | - |
+| `AUTO_BLOCK_ON_DANGER_DEBT` | 危险欠款是否自动禁单 | `true`/`false` | 否 | `true` |
+| `DANGER_DEBT_THRESHOLD` | 危险欠款阈值 | `30`（表示欠 30 元时警告） | 否 | 账户透支额度 |
+
+### 前端（React + Vite）
+
+在 `frontend/` 目录中提供了可直接部署到 GitHub Pages 的客户前端，覆盖登录/注册/重置密码、自助首页仪表盘、个人中心、管理员充值审核与用户管理。
+
+```bash
+cd frontend
+npm install
+npm run dev          # 本地调试
+VITE_API_BASE_URL=http://localhost:3000 npm run build
+npm run preview      # 预览产物
+```
+
+* **API 地址**：通过环境变量 `VITE_API_BASE_URL` 指向部署好的 NestJS 后端。
+* **GitHub Pages 发布**：Vite 已设置 `base: './'` 便于静态托管。可在 GitHub Actions 或本地执行 `npm run build`，将 `frontend/dist` 推送到 `gh-pages` 分支后在仓库 Settings → Pages 选择该分支，即可生成公开访问地址。
+* **页面组成**：
+  * **登录页**：支持账号密码登录并缓存 JWT。
+  * **注册流程**：需先通过 `/auth/register/request-code` 获取邮箱验证码，再提交注册表单（密码与验证码均经 RSA 保护）。
+  * **仪表盘**：展示账户余额总览、低余额统计、班级批量下单趋势示例。
+  * **个人中心**：显示当前用户信息与个人账户余额阈值。
+  * **充值审核**：列出待审核充值请求，可通过/拒绝。
+  * **用户管理**：展示全量用户并支持启用/禁用切换。
+
+### 前端部署与后端对接教程
+
+以 GitHub Pages 与自有服务器为例，说明如何构建前端并指向 NestJS 后端：
+
+1. **准备后端入口地址**：确保后端可通过公网访问（例如 `https://api.example.com`），并在后端开启 CORS 或通过反向代理放行前端域名。
+2. **配置前端 API 地址**：在 `frontend/` 根目录创建 `.env.production`（或在构建命令前加入环境变量），填写：
+   ```bash
+   VITE_API_BASE_URL=https://api.example.com
+   ```
+   若后端通过反向代理挂载在子路径 `/api`，则写成 `https://api.example.com/api`。
+3. **构建前端产物**：
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   ```
+   产物位于 `frontend/dist`，可直接静态托管。
+4. **部署到 GitHub Pages**：
+   * 创建 `gh-pages` 分支（或使用现成的 GitHub Actions 工作流）并将 `frontend/dist` 内容推送到该分支根目录。
+   * 在仓库 **Settings → Pages** 选择 `Deploy from a branch`，指定 `gh-pages` 分支和 `/ (root)` 目录。
+   * 等待 Pages 发布完成，访问生成的前端 URL，确认页面可加载并能请求后端接口。
+5. **部署到自有服务器 / 宝塔静态站点**：
+   * 将 `frontend/dist` 上传到服务器静态目录（如 Nginx `html/` 或宝塔“创建网站”后的根目录）。
+   * 若与后端同机部署，可在 Nginx/宝塔反向代理中添加：
+     ```nginx
+     location /api/ {
+       proxy_pass http://127.0.0.1:3000/;
+     }
+     ```
+     并把 `VITE_API_BASE_URL` 设为前端域名的 `/api` 路径，例如 `https://front.example.com/api`。
+    * 后端若通过 PM2/Node 提供服务，请同步设置上面的 `HTTP_*_TIMEOUT` 环境变量，避免代理空闲连接被 Node 过早关闭导致 502。
+   * 确认 HTTPS 证书正常（JWT 在浏览器端需通过 HTTPS 传输），必要时在后端 `main.ts` 启用 `app.enableCors({ origin: '<前端域名>', credentials: true })`。
+6. **常见排查**：
+   * 前端报 CORS：检查后端是否允许前端域名、请求头中是否携带 `Authorization`，或在反向代理中是否剥离了该头。
+   * 登录后接口 401：确认 `VITE_API_BASE_URL` 指向正确、后端 JWT 秘钥一致，前端存储的 token 是否过期。
+   * 静态资源 404：若使用子路径部署，确保 `vite.config.ts` 的 `base` 与实际路径一致（当前为 `'./'`，适合 Pages/子路径）。
+
+### 增量补丁（订餐需求、模板复用、多账本等）
+
+在现有功能上追加的最新规范补丁要点：
+
+- **订餐需求申报**：成员提交 `order_requests`，管理员单条或批量转订单；含每日限次与待处理提醒。
+- **订单模板复用**：个人复用上次订单，管理员按某日生成聚合模板。
+- **对账提示与欠款限制**：还款审核提供匹配提示；下单前校验欠款上限，危险欠款可自动禁单并通知。
+- **退款/冲正权限**：OWNER 可全局冲正，MANAGER 仅能处理自己订单的交易。
+- **报表导出与群消息**：新增支付方式/商品排行/消费榜、CSV 导出与欠款群消息模板。
+- **特价/限量与批量下单重试**：锁价、限量警告可 `force=true` 重试，并返回失败用户列表便于一键剔除重下。
+- **多账本支持**：核心业务表按 `ledger_id` 隔离，接口附带 `X-Ledger-Id`，支持 ledger 创建/邀请。更多细节见 `docs/final-spec.md`。
+
+### 编译 / 检查
+
+如需验证 TypeScript 编译（无运行数据库也可执行），运行：
+
+```bash
+npm test
+```
+
+默认使用 MySQL 连接，可通过环境变量覆盖：
+
+* `DB_HOST` / `DB_PORT`
+* `DB_USERNAME` / `DB_PASSWORD`
+* `DB_NAME`
+* `DB_CHARSET`（可选，默认 `utf8mb4_unicode_ci`，便于在旧版本 MySQL 上兼容 Emoji 等字符）
+
+> TypeORM 已启用 `supportBigNumbers`、`legacySpatialSupport` 和 `dateStrings` 以兼容 MySQL 5.7.43 默认行为，如需调整可通过环境变量覆盖连接参数。
+
+> 当前开启 TypeORM `synchronize` 便于本地启动，生产环境请改为迁移方案。
+
+### PM2 / 宝塔面板部署示例
+
+仓库根目录提供了 `ecosystem.config.js`，可直接在服务器执行：
+
+```bash
+npm install
+npm run build
+pm2 start ecosystem.config.js --env production
+```
+
+如需自定义数据库、端口或 JWT 秘钥，可编辑该文件中的 `env` / `env_production` 字段，或在启动命令后追加 `--env` 指向自定义环境。`ecosystem.config.js` 默认以 `dist/main.js` 作为入口，因此在运行 PM2 之前务必先完成 `npm run build`。
+
+在宝塔面板的“添加 Node 项目”中选择 **PM2 项目**，关键字段示例（参考截图）：
+
+| 字段 | 示例值 | 说明 |
+| --- | --- | --- |
+| Node版本 | 自定义添加 → v22.20.0 | 与本地构建一致的 LTS 版本 |
+| 入口文件 | `/www/wwwroot/Pay-Breakfast/dist/main.js` | 先在服务器执行 `npm install && npm run build` 生成 dist |
+| 项目名称 | `pay-breakfast-api` | 可自定义 |
+| 运行用户 | `www` | 与站点一致即可 |
+| 内存上限 | `1024` | 超过自动重启，可按机器规格调整 |
+| 启动脚本参数 | `--color`（可留空） | 如需额外 Node 参数可填入 |
+| 项目路径 | `/www/wwwroot/Pay-Breakfast` | 包含 `package.json` 的目录 |
+| 环境变量 | 一行一个，例如：<br>`PORT=3000`<br>`DB_HOST=127.0.0.1`<br>`DB_PORT=3306`<br>`DB_USERNAME=pay_user`<br>`DB_PASSWORD=pay_pass`<br>`DB_NAME=pay_breakfast`<br>`JWT_SECRET=change_me` | 与后端配置一致 |
+
+* 部署步骤：
+  1. 使用宝塔终端或 SSH 将项目代码放到 `项目路径`，执行 `npm install && npm run build`。
+  2. 在 PM2 表单填入上表参数并保存，点击“添加/保存”后启动。
+  3. 若前面配置了反向代理域名，将域名指向服务器并转发到 `PORT` 端口，即可让前端通过 `VITE_API_BASE_URL` 访问。
+  4. 如需日志查看，可在宝塔 PM2 管理中查看 `out`/`error` 日志或使用 `pm2 logs pay-breakfast-api`。
+
+## 核心功能概览
+
+* **账户服务**：
+  * `consume()` 与 `recharge()` 确保在事务中更新余额并写入 `transactions` 表，处理透支校验与余额阈值告警。
+  * 自动生成 `risk_events` 和站内 `notifications`，示例通过 `x-user-id` 请求头模拟登录用户。
+* **班级批量下单**：
+  * `POST /class-group-orders` 校验操作人、IP、人数与金额上限，逐项扣费并记录到 `class_group_orders` 与子项表。
+  * 支持成功/失败混合的订单状态回执。
+* **充值申请审核**：
+  * `POST /recharge-requests` 生成线下扫码充值申请。
+  * `POST /recharge-requests/:id/review` 审核通过时调用账户充值逻辑，拒绝时仅更新状态与备注。
+
+## 模块组织
+
+* `src/entities/`：完整的表结构映射，覆盖用户、班级、账户、流水、批量订单、充值申请、风控与通知等。
+* `src/accounts/`：账户变动与阈值告警服务。
+* `src/class-orders/`：班级批量下单控制器与业务逻辑。
+* `src/recharge/`：充值申请创建与审核。
+* `src/notifications/`：简单通知查询/创建服务。
+
+上述代码主要用于展示业务流程与数据结构，实际接入需补充完善的鉴权、角色控制、错误码包装及更多报表接口。
