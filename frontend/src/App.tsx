@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation, NavLink } from 'react-router-dom';
+import { Navigate, Route, Routes, NavLink } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -17,9 +17,8 @@ import AdminLayout from './layouts/AdminLayout';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
-  const location = useLocation();
   if (!token) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <LoginPage />;
   }
   return children;
 }

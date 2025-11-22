@@ -1,5 +1,6 @@
 import { JSEncrypt } from 'jsencrypt';
 import { BreakfastCategory, BreakfastProduct, PublicHighlights, UserProfile } from '../types';
+import { redirectToAppRoot } from './redirect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -38,36 +39,13 @@ interface BatchOrderPayload {
 
 let cachedPublicKey: string | null = null;
 
-function decodeJwt(token: string): any | null {
-  try {
-    const [, payload] = token.split('.');
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = atob(normalized);
-    return JSON.parse(decoded);
-  } catch (err) {
-    console.warn('Failed to decode token', err);
-    return null;
-  }
-}
-
-function forceLogout(message?: string) {
+function clearAuthAndRedirect(reason?: string) {
   localStorage.removeItem('pb_token');
   localStorage.removeItem('pb_user');
-  if (message) {
-    console.warn(message);
+  if (reason) {
+    console.warn(reason);
   }
-  if (typeof window !== 'undefined') {
-    window.location.href = '/login';
-  }
-}
-
-function ensureTokenValid(token: string | null) {
-  if (!token) return;
-  const payload = decodeJwt(token);
-  if (payload?.exp && payload.exp * 1000 < Date.now()) {
-    forceLogout('token expired');
-    throw new Error('登录已过期，请重新登录');
-  }
+  redirectToAppRoot();
 }
 
 async function fetchPublicKey(): Promise<string> {
@@ -90,7 +68,6 @@ async function encryptSensitive(content: string): Promise<string> {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('pb_token');
-  ensureTokenValid(token);
   const headers = new Headers(options.headers || undefined);
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -101,7 +78,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (res.status === 401) {
-    forceLogout('unauthorized');
+    clearAuthAndRedirect('unauthorized');
     throw new Error('登录已过期，请重新登录');
   }
   if (!res.ok) {

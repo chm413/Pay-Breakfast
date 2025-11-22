@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../utils/storage';
+import { redirectToAppRoot } from '../utils/redirect';
 import { UserProfile } from '../types';
 
 interface AuthContextValue {
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout: () => {
         setUser(null);
         setToken(null);
+        redirectToAppRoot();
       },
     }),
     [token, user]
