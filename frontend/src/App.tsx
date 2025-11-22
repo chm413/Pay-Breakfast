@@ -12,6 +12,7 @@ import { useAuth } from './state/AuthContext';
 import AdminGuard from './components/AdminGuard';
 import AdminLayout from './layouts/AdminLayout';
 
+
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
   const location = useLocation();
