@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [realName, setRealName] = useState('');
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [resetToken, setResetToken] = useState('');
+  const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [info, setInfo] = useState('');
   const [error, setError] = useState('');
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
   async function handleResetRequest() {
     if (!email) {
-      setError('请填写邮箱以接收重置口令');
+      setError('请填写邮箱以接收重置验证码');
       return;
     }
     setLoading(true);
@@ -87,7 +87,7 @@ export default function LoginPage() {
     setInfo('');
     try {
       await requestPasswordReset(email);
-      setInfo('已发送重置口令，请查收邮箱或查看日志输出');
+      setInfo('已发送重置验证码，请查收邮箱或查看日志输出');
     } catch (err) {
       console.error(err);
       setError('发送失败，请稍后重试');
@@ -117,7 +117,12 @@ export default function LoginPage() {
         setInfo('注册成功，已为您自动登录');
         navigate('/', { replace: true });
       } else {
-        await resetPassword(resetToken, newPassword);
+        if (!resetCode) {
+          setError('请填写邮箱验证码后再重置密码');
+          setLoading(false);
+          return;
+        }
+        await resetPassword(email, resetCode, newPassword);
         setInfo('密码已重置，请使用新密码登录');
         setMode('login');
       }
@@ -272,12 +277,12 @@ export default function LoginPage() {
           {mode === 'reset' && (
             <>
               <label>
-                <div>重置口令 / Token</div>
+                <div>邮箱验证码</div>
                 <input
                   className="input"
-                  value={resetToken}
-                  onChange={(e) => setResetToken(e.target.value)}
-                  placeholder="请输入邮件收到的口令"
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value)}
+                  placeholder="请输入邮件收到的验证码"
                   required
                 />
               </label>
@@ -300,7 +305,7 @@ export default function LoginPage() {
 
           {mode === 'reset' && (
             <button type="button" className="button-secondary" onClick={handleResetRequest} disabled={loading}>
-              发送重置口令到邮箱
+              发送重置验证码到邮箱
             </button>
           )}
 

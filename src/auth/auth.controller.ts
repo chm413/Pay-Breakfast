@@ -31,12 +31,12 @@ export class AuthController {
 
   @Post('register/request-code')
   requestRegisterCode(@Body() dto: RequestRegisterCodeDto) {
-    return this.authService.requestRegisterCode(dto.email);
+    return this.authService.requestRegisterCode(dto.email, dto.purpose || 'REGISTER');
   }
 
   @Post('request-reset')
   requestReset(@Body() dto: RequestResetDto) {
-    return this.authService.requestReset(dto.email);
+    return this.authService.requestReset(dto.email, dto.purpose || 'RESET_PWD');
   }
 
   @Post('reset-password')

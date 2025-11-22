@@ -137,22 +137,22 @@ export async function registerWithCode(payload: RegisterPayload) {
 export async function requestRegisterCode(email: string) {
   return request<{ success: boolean }>('/auth/register/request-code', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, purpose: 'REGISTER' }),
   });
 }
 
 export async function requestPasswordReset(email: string) {
   return request<{ success: boolean }>('/auth/request-reset', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, purpose: 'RESET_PWD' }),
   });
 }
 
-export async function resetPassword(token: string, newPassword: string) {
+export async function resetPassword(email: string, code: string, newPassword: string) {
   const encryptedPassword = await encryptSensitive(newPassword);
   return request<{ success: boolean }>('/auth/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ token, newPassword: encryptedPassword, encrypted: true }),
+    body: JSON.stringify({ email, code, newPassword: encryptedPassword, encrypted: true }),
   });
 }
 

@@ -18,6 +18,12 @@ export class EmailVerificationCode {
   @Column({ type: 'datetime' })
   expiresAt!: Date;
 
+  @Column({ type: 'int', name: 'attempt_count', default: 0 })
+  attemptCount!: number;
+
+  @Column({ type: 'datetime', name: 'used_at', nullable: true })
+  usedAt!: Date | null;
+
   @CreateDateColumn({ type: 'datetime' })
   createdAt!: Date;
 }
