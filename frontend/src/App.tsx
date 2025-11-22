@@ -23,34 +23,69 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+
+  const navItems = [
+    { to: '/', label: '仪表盘', icon: '📊' },
+    { to: '/profile', label: '个人中心', icon: '👤' },
+    { to: '/order', label: '我要下单', icon: '🧾' },
+    ...(isAdmin
+      ? [
+          { to: '/recharges', label: '充值审核', icon: '💳' },
+          { to: '/users', label: '用户管理', icon: '🧑‍💼' },
+          { to: '/admin/categories', label: '早餐分类管理', icon: '🍱' },
+          { to: '/admin/products', label: '早餐商品管理', icon: '🛒' },
+          { to: '/admin/batch-order', label: '批量下单', icon: '📦' },
+        ]
+      : []),
+  ];
+
   return (
     <div className="container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>鸿铭外卖服务平台</h2>
-          <p style={{ margin: 0, color: '#64748b' }}>个人余额、班级批量下单、充值审核一站式管理</p>
+      <header className="hero" style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ maxWidth: 700 }}>
+            <div className="chip" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)' }}>
+              <span role="img" aria-label="sparkle">
+                ✨
+              </span>
+              鸿铭外卖服务平台
+            </div>
+            <h2 style={{ margin: '10px 0 6px' }}>每日早餐、资金安全，一站式管理</h2>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', lineHeight: 1.6 }}>
+              统一下单、充值审核、余额告警和报表统计，全部在同一工作台完成。RSA 保护登录凭据，SMTP 支持自助注册与找回密码。
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              <NavLink className="pill-button" to="/order">
+                🛒 立即下单
+              </NavLink>
+              {isAdmin && (
+                <NavLink className="pill-button secondary" to="/admin/batch-order">
+                  🚀 打开管理工作台
+                </NavLink>
+              )}
+            </div>
+          </div>
+          <div className="glass" style={{ padding: 16, borderRadius: 16, minWidth: 240 }}>
+            <div style={{ fontSize: 13, color: '#0ea5e9', fontWeight: 700 }}>当前用户</div>
+            <div style={{ fontWeight: 800, fontSize: 22 }}>{user?.realName || '访客'}</div>
+            <div style={{ color: '#e0f2fe', background: 'rgba(0,0,0,0.12)', padding: '6px 10px', borderRadius: 10, display: 'inline-flex', gap: 6 }}>
+              {(user?.roles || []).join(' / ') || '未登录'}
+            </div>
+            <button className="pill-button" style={{ marginTop: 10, width: '100%' }} onClick={logout}>
+              退出登录
+            </button>
+          </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 700 }}>{user?.realName || '访客'}</div>
-          <div style={{ color: '#475569', fontSize: 13 }}>{user?.roles.join(' / ')}</div>
-          <button style={{ marginTop: 6 }} className="button-primary" onClick={logout}>
-            退出登录
-          </button>
-        </div>
+        <nav className="nav">
+          {navItems.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.to === '/'}>
+              <span>{item.icon}</span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </header>
-      <nav className="nav">
-        <NavLink to="/" end>
-          仪表盘
-        </NavLink>
-        <NavLink to="/profile">个人中心</NavLink>
-        <NavLink to="/order">我要下单</NavLink>
-        {isAdmin && <NavLink to="/recharges">充值审核</NavLink>}
-        {isAdmin && <NavLink to="/users">用户管理</NavLink>}
-        {isAdmin && <NavLink to="/admin/categories">早餐分类管理</NavLink>}
-        {isAdmin && <NavLink to="/admin/products">早餐商品管理</NavLink>}
-        {isAdmin && <NavLink to="/admin/batch-order">批量下单</NavLink>}
-      </nav>
-      <main style={{ marginTop: 18 }}>{children}</main>
+      <main style={{ marginTop: 10 }}>{children}</main>
     </div>
   );
 }
