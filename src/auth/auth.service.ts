@@ -34,6 +34,13 @@ export class AuthService implements OnModuleInit {
   private resetTokens = new Map<string, ResetToken>();
   private mailer?: Transporter;
   private recentVerified = new Map<number, number>();
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
+  private normalizeCode(code: string) {
+    return code.trim();
+  }
 
   constructor(
     @InjectRepository(User)
@@ -213,17 +220,19 @@ export class AuthService implements OnModuleInit {
 
   async register(dto: RegisterDto) {
     const password = this.decryptIfNeeded(dto.password, dto.encrypted);
+    const normalizedEmail = this.normalizeEmail(dto.email);
+    const normalizedCode = this.normalizeCode(dto.code);
     const exists = await this.usersRepository.findOne({ where: { username: dto.username } });
     if (exists) {
       throw new BadRequestException('用户名已存在');
     }
 
-    const emailExists = await this.usersRepository.findOne({ where: { email: dto.email } });
+    const emailExists = await this.usersRepository.findOne({ where: { email: normalizedEmail } });
     if (emailExists) {
       throw new BadRequestException('邮箱已注册');
     }
 
-    await this.assertValidRegisterCode(dto.email, dto.code);
+    await this.assertValidRegisterCode(normalizedEmail, normalizedCode);
 
     let studentRole = await this.rolesRepository.findOne({ where: { code: 'STUDENT' } });
     if (!studentRole) {
@@ -233,14 +242,14 @@ export class AuthService implements OnModuleInit {
     const user = this.usersRepository.create({
       username: dto.username,
       realName: dto.realName,
-      email: dto.email,
+      email: normalizedEmail,
       passwordHash: await bcrypt.hash(password, 10),
       status: 1,
     });
     const saved = await this.usersRepository.save(user);
     const link = this.userRolesRepository.create({ user: saved, role: studentRole });
     await this.userRolesRepository.save(link);
-    await this.consumeRegisterCode(dto.email, dto.code);
+    await this.consumeRegisterCode(normalizedEmail, normalizedCode);
 
     const userInfo = await this.buildUserInfo({ ...saved, roles: [link] } as User);
     const accessToken = jwt.sign(userInfo, this.jwtSecret, { expiresIn: '2h' });
@@ -248,7 +257,8 @@ export class AuthService implements OnModuleInit {
   }
 
   async requestReset(email: string) {
-    const user = await this.usersRepository.findOne({ where: { email } });
+    const normalizedEmail = this.normalizeEmail(email);
+    const user = await this.usersRepository.findOne({ where: { email: normalizedEmail } });
     if (!user) {
       return { success: true };
     }
@@ -259,7 +269,7 @@ export class AuthService implements OnModuleInit {
 
     const subject = '密码重置验证码';
     const body = `您的密码重置链接/口令：${token}\n30 分钟内有效。若非本人操作请忽略。`;
-    await this.dispatchEmail(email, subject, body);
+    await this.dispatchEmail(normalizedEmail, subject, body);
     return { success: true };
   }
 
@@ -293,13 +303,14 @@ export class AuthService implements OnModuleInit {
   }
 
   async requestRegisterCode(email: string) {
-    const existingUser = await this.usersRepository.findOne({ where: { email } });
+    const normalizedEmail = this.normalizeEmail(email);
+    const existingUser = await this.usersRepository.findOne({ where: { email: normalizedEmail } });
     if (existingUser) {
       throw new BadRequestException('邮箱已注册，请直接登录或找回密码');
     }
 
     const recent = await this.emailCodesRepository.findOne({
-      where: { email, purpose: 'REGISTER' },
+      where: { email: normalizedEmail, purpose: 'REGISTER' },
       order: { createdAt: 'DESC' },
     });
     if (recent && recent.createdAt.getTime() > Date.now() - 60 * 1000) {
@@ -309,10 +320,14 @@ export class AuthService implements OnModuleInit {
     const code = this.generateNumericCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await this.emailCodesRepository.save(
-      this.emailCodesRepository.create({ email, code, purpose: 'REGISTER', expiresAt }),
+      this.emailCodesRepository.create({ email: normalizedEmail, code, purpose: 'REGISTER', expiresAt }),
     );
 
-    await this.dispatchEmail(email, '注册验证码', `您的注册验证码为：${code}，10 分钟内有效。`);
+    await this.dispatchEmail(
+      normalizedEmail,
+      '注册验证码',
+      `您的注册验证码为：${code}，10 分钟内有效。`,
+    );
     return { success: true, expiresAt };
   }
 
