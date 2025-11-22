@@ -14,11 +14,10 @@ export function getJwtSecret(): string {
 }
 
 export function extractUserFromRequest(req?: Request): AuthUser {
-  if (!req) {
+  const header = req?.headers?.authorization || '';
+  if (!req || !header) {
     throw new UnauthorizedException('缺少鉴权信息');
   }
-
-  const header = req.headers?.authorization || '';
   const [, token] = header.split(' ');
   if (!token) {
     throw new UnauthorizedException('缺少鉴权信息');

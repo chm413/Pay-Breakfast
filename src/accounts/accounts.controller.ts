@@ -20,7 +20,7 @@ export class AccountsController {
 
   @Get('me')
   async getMe(@Req() req: AuthedRequest) {
-    const user = extractUserFromRequest(req);
+    const user = req?.user || extractUserFromRequest(req);
     const account = await this.accountsService.getOrCreatePersonalAccountForUser(user.id);
     return {
       id: account.id,
