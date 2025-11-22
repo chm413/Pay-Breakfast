@@ -1,0 +1,137 @@
+import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { NextFunction, Request, Response } from 'express';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { AppModule } from './app.module';
+
+const envSearchOrder = (() => {
+  const files: string[] = [];
+  if (process.env.ENV_FILE) {
+    files.push(path.resolve(process.env.ENV_FILE));
+  }
+
+  // Prefer the project root (process.cwd) and the compiled root (dist/..),
+  // plus a local override file if present.
+  const projectRootEnv = path.resolve(process.cwd(), '.env');
+  const compiledRootEnv = path.resolve(__dirname, '..', '.env');
+  const projectLocalEnv = path.resolve(process.cwd(), '.env.local');
+
+  [projectLocalEnv, projectRootEnv, compiledRootEnv].forEach((p) => {
+    if (!files.includes(p)) {
+      files.push(p);
+    }
+  });
+
+  return files;
+})();
+
+let loadedEnvCount = 0;
+envSearchOrder.forEach((filePath) => {
+  if (fs.existsSync(filePath)) {
+    const result = dotenv.config({ path: filePath });
+    loadedEnvCount += Object.keys(result.parsed || {}).length;
+  }
+});
+
+if (loadedEnvCount === 0) {
+  // eslint-disable-next-line no-console
+  console.warn('未找到 .env 配置文件，正在使用进程环境变量。');
+}
+
+function ensureRequiredEnv() {
+  const requiredKeys = ['DB_HOST', 'DB_PASSWORD', 'JWT_SECRET'];
+  if ((process.env.NODE_ENV || 'development') !== 'production') {
+    return;
+  }
+
+  const missing = requiredKeys.filter((key) => !process.env[key]);
+  if (missing.length) {
+    // eslint-disable-next-line no-console
+    console.error(`缺少必要环境变量: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  const smtpRequired = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'];
+  const smtpMissing = smtpRequired.filter((key) => !process.env[key]);
+  if (smtpMissing.length) {
+    // eslint-disable-next-line no-console
+    console.error(`SMTP 配置不完整: ${smtpMissing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
+function readTimeoutEnv(key: string, fallback: number): number {
+  const value = process.env[key];
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+async function bootstrap() {
+  ensureRequiredEnv();
+  const app = await NestFactory.create(AppModule, { cors: true });
+
+  const expressInstance = app.getHttpAdapter().getInstance?.();
+  if (expressInstance?.set) {
+    const trustProxy = process.env.TRUST_PROXY;
+    if (trustProxy === 'false' || trustProxy === '0') {
+      expressInstance.set('trust proxy', false);
+    } else {
+      // Default to trusting one proxy (e.g., Nginx/宝塔) so rate limiting can
+      // correctly read the real client IP from X-Forwarded-For and avoid warnings.
+      expressInstance.set('trust proxy', trustProxy ?? 1);
+    }
+  }
+
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 600,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: '请求过于频繁，请稍后再试',
+    }),
+  );
+  app.use(
+    '/auth',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: '鉴权请求过多，请稍后再试',
+    }),
+  );
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const raw = `${req.originalUrl} ${JSON.stringify(req.body || {})} ${JSON.stringify(req.query || {})}`.toLowerCase();
+    const blocked = ['<script', '</script', 'select ', 'union ', '../'];
+    if (blocked.some((keyword) => raw.includes(keyword))) {
+      return res.status(400).send('非法请求已被拒绝');
+    }
+    next();
+  });
+
+  const server = app.getHttpAdapter().getHttpServer();
+  if (server) {
+    // 反向代理（Nginx/宝塔等）默认 keep-alive 超时时间较高，如果 Node 服务保持
+    // 默认 5 秒会导致 "upstream prematurely closed connection" 报错并返回 502。
+    // 这里设置更长的默认值，并允许通过环境变量覆盖（单位：毫秒）。
+    server.keepAliveTimeout = readTimeoutEnv('HTTP_KEEP_ALIVE_TIMEOUT', 65_000);
+    server.headersTimeout = readTimeoutEnv('HTTP_HEADERS_TIMEOUT', 66_000);
+    server.requestTimeout = readTimeoutEnv('HTTP_REQUEST_TIMEOUT', 60_000);
+  }
+
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`Server started on port ${port}`);
+}
+
+bootstrap();
