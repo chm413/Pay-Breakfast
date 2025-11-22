@@ -8,10 +8,12 @@ import PersonalOrderPage from './pages/PersonalOrderPage';
 import CategoryManagementPage from './pages/admin/CategoryManagementPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import BatchOrderPage from './pages/admin/BatchOrderPage';
+import AnnouncementPage from './pages/admin/AnnouncementPage';
+import SystemStatusPage from './pages/admin/SystemStatusPage';
+import VendorManagementPage from './pages/admin/VendorManagementPage';
 import { useAuth } from './state/AuthContext';
 import AdminGuard from './components/AdminGuard';
 import AdminLayout from './layouts/AdminLayout';
-
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -99,6 +101,9 @@ export default function App() {
         <Route index element={<Navigate to="users" replace />} />
         <Route path="users" element={<UserManagementPage />} />
         <Route path="recharges" element={<RechargeReviewPage />} />
+        <Route path="announcements" element={<AnnouncementPage />} />
+        <Route path="system" element={<SystemStatusPage />} />
+        <Route path="vendors" element={<VendorManagementPage />} />
         <Route path="categories" element={<CategoryManagementPage />} />
         <Route path="products" element={<ProductManagementPage />} />
         <Route path="batch-order" element={<BatchOrderPage />} />

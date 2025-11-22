@@ -5,6 +5,9 @@ import AdminGuard from '../components/AdminGuard';
 const adminNav = [
   { to: '/admin/users', label: '用户管理', icon: '🧑‍💼' },
   { to: '/admin/recharges', label: '充值审核', icon: '💳' },
+  { to: '/admin/announcements', label: '公告管理', icon: '📢' },
+  { to: '/admin/system', label: '系统状态', icon: '🖥️' },
+  { to: '/admin/vendors', label: '店家与日结', icon: '🏪' },
   { to: '/admin/categories', label: '早餐分类', icon: '🍱' },
   { to: '/admin/products', label: '早餐商品', icon: '🛒' },
   { to: '/admin/batch-order', label: '批量下单', icon: '📦' },

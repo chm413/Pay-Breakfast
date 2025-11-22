@@ -29,6 +29,9 @@ export class User {
   @Column({ length: 128, nullable: true })
   email?: string;
 
+  @Column({ length: 32, nullable: true })
+  qq?: string;
+
   @Column({ name: 'class_or_dorm', length: 128, nullable: true })
   classOrDorm?: string;
 

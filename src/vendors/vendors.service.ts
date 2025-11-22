@@ -1,16 +1,30 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { BreakfastProduct, OrderItem, Vendor, VendorDailySettlement } from '../entities';
 
 @Injectable()
-export class VendorsService {
+export class VendorsService implements OnModuleInit {
   constructor(
     @InjectRepository(Vendor) private readonly vendorsRepo: Repository<Vendor>,
     @InjectRepository(VendorDailySettlement) private readonly settlementsRepo: Repository<VendorDailySettlement>,
     @InjectRepository(OrderItem) private readonly orderItemsRepo: Repository<OrderItem>,
     @InjectRepository(BreakfastProduct) private readonly productRepo: Repository<BreakfastProduct>,
   ) {}
+
+  private lastSettlementDate?: string;
+
+  onModuleInit() {
+    this.tryRunForToday();
+    setInterval(() => this.tryRunForToday(), 60 * 60 * 1000);
+  }
+
+  private async tryRunForToday() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.lastSettlementDate === today) return;
+    await this.runDailySettlement(undefined, today);
+    this.lastSettlementDate = today;
+  }
 
   private ensureAdmin(req: any) {
     const roles: string[] = req.user?.roles || [];
@@ -65,7 +79,8 @@ export class VendorsService {
     return this.settlementsRepo.find({ where, order: { date: 'DESC' } });
   }
 
-  async runDailySettlement(date: string) {
+  async runDailySettlement(req: any, date?: string) {
+    if (req) this.ensureAdmin(req);
     const day = date || new Date().toISOString().slice(0, 10);
     const existing = await this.settlementsRepo.findOne({ where: { date: day } });
     if (existing) return existing;

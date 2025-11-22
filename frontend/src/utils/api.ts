@@ -38,6 +38,38 @@ interface BatchOrderPayload {
 
 let cachedPublicKey: string | null = null;
 
+function decodeJwt(token: string): any | null {
+  try {
+    const [, payload] = token.split('.');
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(normalized);
+    return JSON.parse(decoded);
+  } catch (err) {
+    console.warn('Failed to decode token', err);
+    return null;
+  }
+}
+
+function forceLogout(message?: string) {
+  localStorage.removeItem('pb_token');
+  localStorage.removeItem('pb_user');
+  if (message) {
+    console.warn(message);
+  }
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+}
+
+function ensureTokenValid(token: string | null) {
+  if (!token) return;
+  const payload = decodeJwt(token);
+  if (payload?.exp && payload.exp * 1000 < Date.now()) {
+    forceLogout('token expired');
+    throw new Error('登录已过期，请重新登录');
+  }
+}
+
 async function fetchPublicKey(): Promise<string> {
   if (cachedPublicKey) return cachedPublicKey;
   const data = await request<{ publicKey: string }>('/auth/public-key');
@@ -58,6 +90,7 @@ async function encryptSensitive(content: string): Promise<string> {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('pb_token');
+  ensureTokenValid(token);
   const headers = new Headers(options.headers || undefined);
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -67,6 +100,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    forceLogout('unauthorized');
+    throw new Error('登录已过期，请重新登录');
+  }
   if (!res.ok) {
     const bodyText = await res.text();
     const detail = bodyText ? bodyText.slice(0, 400) : res.statusText;
@@ -184,7 +221,7 @@ export async function deleteAdminCategory(id: number) {
   });
 }
 
-export async function getAdminProducts(params?: { categoryId?: number; enabled?: number | boolean }) {
+export async function getAdminProducts(params?: { categoryId?: number; enabled?: number | boolean; vendorId?: number }) {
   const query = params
     ? '?' +
       Object.entries(params)
@@ -237,3 +274,106 @@ export async function createBatchOrder(payload: BatchOrderPayload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function updateUserProfile(userId: number, payload: any) {
+  return request(`/admin/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUserPassword(userId: number, newPassword: string) {
+  return request(`/admin/users/${userId}/password`, {
+    method: 'PUT',
+    body: JSON.stringify({ newPassword }),
+  });
+}
+
+export async function fetchUserTransactions(userId: number, params?: { from?: string; to?: string }) {
+  const query = params?.from && params?.to ? `?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}` : '';
+  return request(`/admin/users/${userId}/transactions${query}`);
+}
+
+export async function createUserTransaction(userId: number, payload: { type: string; amount: number; remark?: string }) {
+  return request(`/admin/users/${userId}/transactions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUserTransaction(txId: number, payload: { type?: string; amount?: number; remark?: string }) {
+  return request(`/admin/users/transactions/${txId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteUserTransaction(txId: number) {
+  return request(`/admin/users/transactions/${txId}`, { method: 'DELETE' });
+}
+
+export async function fetchRechargeRequestsAdmin(status?: string) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  return request(`/recharge-requests${query}`);
+}
+
+export async function reviewRechargeAdmin(id: number, approve: boolean, comment?: string) {
+  return request(`/recharge-requests/${id}/review?confirm=true`, {
+    method: 'POST',
+    body: JSON.stringify({ approve, comment }),
+  });
+}
+
+export async function fetchAdminAnnouncements() {
+  return request('/admin/announcements');
+}
+
+export async function createAdminAnnouncement(payload: any) {
+  return request('/admin/announcements', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updateAdminAnnouncement(id: number, payload: any) {
+  return request(`/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function deleteAdminAnnouncement(id: number) {
+  return request(`/admin/announcements/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchLoginAnnouncements() {
+  return request('/announcements/login-popups');
+}
+
+export async function fetchSystemStatus() {
+  return request('/admin/system/status');
+}
+
+export async function fetchVendors() {
+  return request('/admin/vendors');
+}
+
+export async function createVendor(payload: any) {
+  return request('/admin/vendors', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updateVendor(id: number, payload: any) {
+  return request(`/admin/vendors/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function deleteVendor(id: number) {
+  return request(`/admin/vendors/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchVendorSummary(id: number) {
+  return request(`/admin/vendors/${id}/summary`);
+}
+
+export async function fetchVendorSettlements(id: number, params?: { from?: string; to?: string }) {
+  const query = params?.from && params?.to ? `?from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}` : '';
+  return request(`/admin/vendors/${id}/settlements${query}`);
+}
+
+export async function triggerVendorSettlement(date?: string) {
+  return request('/admin/vendors/settlements/run', { method: 'POST', body: JSON.stringify({ date }) });
+}
+

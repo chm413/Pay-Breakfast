@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -43,16 +44,35 @@ export class AdminUsersController {
   ) {}
 
   @Get()
-  async list(@Body() _body: any, req: any) {
+  async list(@Body() _body: any, @Req() req: any) {
     ensureAdmin(req);
-    return this.usersRepository.find({
-      where: {},
+    const users = await this.usersRepository.find({
+      relations: ['roles', 'roles.role'],
       order: { createdAt: 'DESC' },
     });
+
+    const enriched = [] as any[];
+    for (const user of users) {
+      const account = await this.accountsService.getOrCreatePersonalAccountForUser(user.id);
+      enriched.push({
+        id: user.id,
+        username: user.username,
+        realName: user.realName,
+        classOrDorm: user.classOrDorm,
+        email: user.email,
+        qq: user.qq,
+        status: user.status,
+        roles: (user.roles || []).map((r) => r.role?.code).filter(Boolean),
+        balance: Number(account.balance),
+        creditLimit: Number(account.creditLimit),
+        createdAt: user.createdAt,
+      });
+    }
+    return enriched;
   }
 
   @Post()
-  async createUser(@Body() body: any, req: any) {
+  async createUser(@Body() body: any, @Req() req: any) {
     ensureAdmin(req);
     const existing = await this.usersRepository.findOne({ where: { username: body.username } });
     if (existing) {
@@ -64,6 +84,7 @@ export class AdminUsersController {
       username: body.username,
       realName: body.realName,
       email: body.email,
+      qq: body.qq,
       passwordHash,
       classOrDorm: body.classOrDorm,
       status: 1,
@@ -98,19 +119,40 @@ export class AdminUsersController {
   }
 
   @Put(':id')
-  async updateUser(@Param('id', ParseIntPipe) id: number, @Body() body: any, req: any) {
+  async updateUser(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Req() req: any) {
     ensureAdmin(req);
-    await this.usersRepository.update({ id }, {
-      realName: body.realName,
-      classOrDorm: body.classOrDorm,
-      email: body.email,
-      status: body.enabled ? 1 : 0,
-    });
+    const statusValue =
+      body.enabled !== undefined ? (body.enabled ? 1 : 0) : body.status !== undefined ? Number(body.status) : undefined;
+    await this.usersRepository.update(
+      { id },
+      {
+        realName: body.realName,
+        classOrDorm: body.classOrDorm,
+        email: body.email,
+        qq: body.qq,
+        status: statusValue,
+      },
+    );
+
+    if (body.role) {
+      let role = await this.rolesRepository.findOne({ where: { code: body.role } });
+      if (!role) {
+        role = await this.rolesRepository.save(this.rolesRepository.create({ code: body.role, name: body.role }));
+      }
+      const links = await this.userRolesRepository.find({ where: { user: { id } } });
+      await this.userRolesRepository.remove(links);
+      const link = this.userRolesRepository.create({ user: { id } as any, role });
+      await this.userRolesRepository.save(link);
+    }
     return { id };
   }
 
   @Put(':id/password')
-  async updatePassword(@Param('id', ParseIntPipe) id: number, @Body('newPassword') newPassword: string, req: any) {
+  async updatePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('newPassword') newPassword: string,
+    @Req() req: any,
+  ) {
     ensureAdmin(req);
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersRepository.update({ id }, { passwordHash });
@@ -118,7 +160,7 @@ export class AdminUsersController {
   }
 
   @Delete(':id')
-  async softDelete(@Param('id', ParseIntPipe) id: number, req: any) {
+  async softDelete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     ensureAdmin(req);
     await this.usersRepository.update({ id }, { status: 0 });
     return { id, status: 'disabled' };
@@ -129,7 +171,7 @@ export class AdminUsersController {
     @Param('id', ParseIntPipe) id: number,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    req?: any,
+    @Req() req?: any,
   ) {
     ensureAdmin(req);
     const user = await this.usersRepository.findOne({ where: { id }, relations: ['accounts'] });
@@ -149,7 +191,7 @@ export class AdminUsersController {
   async createTransaction(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: any,
-    req: any,
+    @Req() req: any,
   ) {
     ensureAdmin(req);
     const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
@@ -166,26 +208,31 @@ export class AdminUsersController {
       operatorUserId: req.user?.id,
     });
     await txRepo.save(tx);
-    await this.accountsService.recalculateAccountBalance(account.id);
+    const recalculated = await this.accountsService.recalculateAccountBalance(account.id);
+    tx.balanceAfter = String(recalculated.balance);
+    await txRepo.save(tx);
     return tx;
   }
 
   @Put('/transactions/:txId')
-  async updateTransaction(@Param('txId', ParseIntPipe) txId: number, @Body() body: any, req: any) {
+  async updateTransaction(@Param('txId', ParseIntPipe) txId: number, @Body() body: any, @Req() req: any) {
     ensureAdmin(req);
     const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
     const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });
     if (!existing) throw new NotFoundException('Transaction not found');
     existing.amount = Number(body.amount ?? existing.amount).toFixed(2) as any;
     existing.type = body.type || existing.type;
+    existing.direction = existing.type === 'CONSUME' ? -1 : 1;
     existing.description = body.remark ?? existing.description;
     await txRepo.save(existing);
-    await this.accountsService.recalculateAccountBalance(existing.account.id);
+    const recalculated = await this.accountsService.recalculateAccountBalance(existing.account.id);
+    existing.balanceAfter = String(recalculated.balance);
+    await txRepo.save(existing);
     return existing;
   }
 
   @Delete('/transactions/:txId')
-  async deleteTransaction(@Param('txId', ParseIntPipe) txId: number, req: any) {
+  async deleteTransaction(@Param('txId', ParseIntPipe) txId: number, @Req() req: any) {
     ensureAdmin(req);
     const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
     const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });

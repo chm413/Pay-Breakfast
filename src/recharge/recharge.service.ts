@@ -20,7 +20,7 @@ export class RechargeService {
     const where = status ? { status } : {};
     const records = await this.rechargeRequestsRepository.find({
       where,
-      relations: ['account', 'student'],
+      relations: ['account', 'student', 'reviewer'],
       order: { createdAt: 'DESC' },
     });
     return records.map((item) => ({
@@ -31,6 +31,8 @@ export class RechargeService {
       payMethod: item.payMethod,
       status: item.status,
       createdAt: item.createdAt,
+      reviewerName: item.reviewer?.realName || item.reviewer?.username,
+      reviewTime: item.reviewTime,
     }));
   }
 

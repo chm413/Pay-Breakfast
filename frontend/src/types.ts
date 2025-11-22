@@ -32,6 +32,8 @@ export interface RechargeRequestItem {
   payMethod: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  reviewerName?: string;
+  reviewTime?: string;
 }
 
 export interface DashboardSummary {
@@ -49,4 +51,36 @@ export interface PublicHighlights {
   averageDailyOrders: number;
   topProducts: { productId: number; orders: number; amount: number }[];
   updatedAt: string;
+}
+
+export interface Announcement {
+  id: number;
+  title: string;
+  contentMd: string;
+  showOnLogin: boolean;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface SystemStatus {
+  backendVersion: string;
+  frontendVersion: string;
+  uptimeSeconds: number;
+  totalUsers: number;
+  totalCompletedOrders: number;
+  totalAmount: number;
+}
+
+export interface Vendor {
+  id: number;
+  name: string;
+  enabled: boolean;
+  remark?: string;
+}
+
+export interface VendorSettlement {
+  id: number;
+  date: string;
+  ordersCount: number;
+  totalAmount: number;
 }

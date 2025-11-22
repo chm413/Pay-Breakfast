@@ -43,7 +43,7 @@ export class VendorsController {
   }
 
   @Post('admin/vendors/settlements/run')
-  runSettlement(@Body('date') date: string) {
-    return this.service.runDailySettlement(date);
+  runSettlement(@Req() req: any, @Body('date') date: string) {
+    return this.service.runDailySettlement(req, date);
   }
 }
