@@ -1,0 +1,197 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcryptjs';
+import { Between, Repository } from 'typeorm';
+import { AccountsService } from '../accounts/accounts.service';
+import { SimpleAuthGuard } from '../common/simple-auth.guard';
+import { Role } from '../entities/role.entity';
+import { UserRole } from '../entities/user-role.entity';
+import { User } from '../entities/user.entity';
+import { Transaction } from '../entities/transaction.entity';
+
+function ensureAdmin(req: any) {
+  const roles: string[] = req.user?.roles || [];
+  if (!roles.includes('SUPER_ADMIN') && !roles.includes('ADMIN') && !roles.includes('MANAGER') && !roles.includes('GRADE_ADMIN')) {
+    throw new ForbiddenException({ code: 'NO_PERMISSION', message: '你无权访问该资源' });
+  }
+}
+
+@Controller('admin/users')
+@UseGuards(SimpleAuthGuard)
+export class AdminUsersController {
+  constructor(
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+    @InjectRepository(Role)
+    private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(UserRole)
+    private readonly userRolesRepository: Repository<UserRole>,
+    private readonly accountsService: AccountsService,
+  ) {}
+
+  @Get()
+  async list(@Body() _body: any, req: any) {
+    ensureAdmin(req);
+    return this.usersRepository.find({
+      where: {},
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  @Post()
+  async createUser(@Body() body: any, req: any) {
+    ensureAdmin(req);
+    const existing = await this.usersRepository.findOne({ where: { username: body.username } });
+    if (existing) {
+      return { code: 'USERNAME_EXISTS', message: '用户名已存在' };
+    }
+    const password = this.randomPassword();
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = this.usersRepository.create({
+      username: body.username,
+      realName: body.realName,
+      email: body.email,
+      passwordHash,
+      classOrDorm: body.classOrDorm,
+      status: 1,
+    });
+    const savedUser = await this.usersRepository.save(user);
+
+    const roleCode = body.role || 'MEMBER';
+    let role = await this.rolesRepository.findOne({ where: { code: roleCode } });
+    if (!role) {
+      role = this.rolesRepository.create({ code: roleCode, name: roleCode });
+      role = await this.rolesRepository.save(role);
+    }
+    const link = this.userRolesRepository.create({ user: savedUser, role });
+    await this.userRolesRepository.save(link);
+
+    await this.accountsService.getOrCreatePersonalAccountForUser(savedUser.id);
+    if (body.initialBalance !== undefined || body.creditLimit !== undefined) {
+      const account = await this.accountsService.getOrCreatePersonalAccountForUser(savedUser.id);
+      if (body.initialBalance !== undefined) account.balance = Number(body.initialBalance || 0).toFixed(2);
+      if (body.creditLimit !== undefined) account.creditLimit = Number(body.creditLimit || 0).toFixed(2);
+      await this.usersRepository.manager.save(account);
+    }
+
+    return { userId: savedUser.id, initialPassword: password };
+  }
+
+  private randomPassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789';
+    return Array.from({ length: 10 })
+      .map(() => alphabet.charAt(Math.floor(Math.random() * alphabet.length)))
+      .join('');
+  }
+
+  @Put(':id')
+  async updateUser(@Param('id', ParseIntPipe) id: number, @Body() body: any, req: any) {
+    ensureAdmin(req);
+    await this.usersRepository.update({ id }, {
+      realName: body.realName,
+      classOrDorm: body.classOrDorm,
+      email: body.email,
+      status: body.enabled ? 1 : 0,
+    });
+    return { id };
+  }
+
+  @Put(':id/password')
+  async updatePassword(@Param('id', ParseIntPipe) id: number, @Body('newPassword') newPassword: string, req: any) {
+    ensureAdmin(req);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update({ id }, { passwordHash });
+    return { id };
+  }
+
+  @Delete(':id')
+  async softDelete(@Param('id', ParseIntPipe) id: number, req: any) {
+    ensureAdmin(req);
+    await this.usersRepository.update({ id }, { status: 0 });
+    return { id, status: 'disabled' };
+  }
+
+  @Get(':id/transactions')
+  async listTransactions(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    req?: any,
+  ) {
+    ensureAdmin(req);
+    const user = await this.usersRepository.findOne({ where: { id }, relations: ['accounts'] });
+    if (!user) throw new NotFoundException('User not found');
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
+    const where: any = { account: { id: account.id } };
+    if (from && to) {
+      where.createdAt = Between(new Date(from), new Date(to));
+    }
+    return this.userRolesRepository.manager.getRepository(Transaction).find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  @Post(':id/transactions')
+  async createTransaction(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    req: any,
+  ) {
+    ensureAdmin(req);
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
+    const direction = body.type === 'CONSUME' ? -1 : 1;
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const tx = txRepo.create({
+      account,
+      type: body.type || 'ADJUST',
+      direction,
+      amount: Number(body.amount || 0).toFixed(2),
+      balanceAfter: account.balance,
+      description: body.remark,
+      sourceType: 'ADMIN_MANUAL',
+      operatorUserId: req.user?.id,
+    });
+    await txRepo.save(tx);
+    await this.accountsService.recalculateAccountBalance(account.id);
+    return tx;
+  }
+
+  @Put('/transactions/:txId')
+  async updateTransaction(@Param('txId', ParseIntPipe) txId: number, @Body() body: any, req: any) {
+    ensureAdmin(req);
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });
+    if (!existing) throw new NotFoundException('Transaction not found');
+    existing.amount = Number(body.amount ?? existing.amount).toFixed(2) as any;
+    existing.type = body.type || existing.type;
+    existing.description = body.remark ?? existing.description;
+    await txRepo.save(existing);
+    await this.accountsService.recalculateAccountBalance(existing.account.id);
+    return existing;
+  }
+
+  @Delete('/transactions/:txId')
+  async deleteTransaction(@Param('txId', ParseIntPipe) txId: number, req: any) {
+    ensureAdmin(req);
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });
+    if (!existing) throw new NotFoundException('Transaction not found');
+    await txRepo.delete({ id: txId });
+    await this.accountsService.recalculateAccountBalance(existing.account.id);
+    return { id: txId, status: 'deleted' };
+  }
+}
