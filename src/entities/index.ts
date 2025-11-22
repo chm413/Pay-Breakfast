@@ -19,3 +19,6 @@ export { BreakfastCategory } from './breakfast-category.entity';
 export { BreakfastProduct } from './breakfast-product.entity';
 export { Order } from './order.entity';
 export { OrderItem } from './order-item.entity';
+export { Announcement } from './announcement.entity';
+export { Vendor } from './vendor.entity';
+export { VendorDailySettlement } from './vendor-daily-settlement.entity';

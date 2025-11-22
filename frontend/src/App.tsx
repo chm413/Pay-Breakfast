@@ -10,6 +10,8 @@ import ProductManagementPage from './pages/admin/ProductManagementPage';
 import BatchOrderPage from './pages/admin/BatchOrderPage';
 import { useAuth } from './state/AuthContext';
 import AdminGuard from './components/AdminGuard';
+import AdminLayout from './layouts/AdminLayout';
+
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -28,15 +30,6 @@ function Shell({ children }: { children: React.ReactNode }) {
     { to: '/', label: '仪表盘', icon: '📊' },
     { to: '/profile', label: '个人中心', icon: '👤' },
     { to: '/order', label: '我要下单', icon: '🧾' },
-    ...(isAdmin
-      ? [
-          { to: '/recharges', label: '充值审核', icon: '💳' },
-          { to: '/users', label: '用户管理', icon: '🧑‍💼' },
-          { to: '/admin/categories', label: '早餐分类管理', icon: '🍱' },
-          { to: '/admin/products', label: '早餐商品管理', icon: '🛒' },
-          { to: '/admin/batch-order', label: '批量下单', icon: '📦' },
-        ]
-      : []),
   ];
 
   return (
@@ -59,7 +52,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                 🛒 立即下单
               </NavLink>
               {isAdmin && (
-                <NavLink className="pill-button secondary" to="/admin/batch-order">
+                <NavLink className="pill-button secondary" to="/admin">
                   🚀 打开管理工作台
                 </NavLink>
               )}
@@ -94,6 +87,23 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="users" replace />} />
+        <Route path="users" element={<UserManagementPage />} />
+        <Route path="recharges" element={<RechargeReviewPage />} />
+        <Route path="categories" element={<CategoryManagementPage />} />
+        <Route path="products" element={<ProductManagementPage />} />
+        <Route path="batch-order" element={<BatchOrderPage />} />
+      </Route>
+
       <Route
         path="/*"
         element={
@@ -103,46 +113,7 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/order" element={<PersonalOrderPage />} />
-                <Route
-                  path="/recharges"
-                  element={
-                    <AdminGuard>
-                      <RechargeReviewPage />
-                    </AdminGuard>
-                  }
-                />
-                <Route
-                  path="/users"
-                  element={
-                    <AdminGuard>
-                      <UserManagementPage />
-                    </AdminGuard>
-                  }
-                />
-                <Route
-                  path="/admin/categories"
-                  element={
-                    <AdminGuard>
-                      <CategoryManagementPage />
-                    </AdminGuard>
-                  }
-                />
-                <Route
-                  path="/admin/products"
-                  element={
-                    <AdminGuard>
-                      <ProductManagementPage />
-                    </AdminGuard>
-                  }
-                />
-                <Route
-                  path="/admin/batch-order"
-                  element={
-                    <AdminGuard>
-                      <BatchOrderPage />
-                    </AdminGuard>
-                  }
-                />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Shell>
           </ProtectedRoute>

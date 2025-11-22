@@ -206,4 +206,30 @@ export class AccountsService {
     const notification = this.notificationsRepository.create({ user: { id: userId } as any, title, content });
     await manager.save(notification);
   }
+
+  async recalculateAccountBalance(accountId: number) {
+    const runner = this.dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      const account = await runner.manager.getRepository(Account).findOne({ where: { id: accountId } });
+      if (!account) throw new NotFoundException('Account not found');
+      const sum = await runner.manager
+        .getRepository(Transaction)
+        .createQueryBuilder('tx')
+        .where('tx.account_id = :accountId', { accountId })
+        .select('COALESCE(SUM(tx.direction * tx.amount),0)', 'balance')
+        .getRawOne();
+      const newBalance = Number(sum.balance || 0).toFixed(2);
+      account.balance = newBalance;
+      await runner.manager.save(account);
+      await runner.commitTransaction();
+      return { balance: account.balance };
+    } catch (e) {
+      await runner.rollbackTransaction();
+      throw e;
+    } finally {
+      await runner.release();
+    }
+  }
 }

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { BreakfastCategory } from '../entities/breakfast-category.entity';
 import { BreakfastProduct } from '../entities/breakfast-product.entity';
+import { Vendor } from '../entities/vendor.entity';
 
 @Injectable()
 export class BreakfastService {
@@ -11,6 +12,8 @@ export class BreakfastService {
     private readonly categoryRepo: Repository<BreakfastCategory>,
     @InjectRepository(BreakfastProduct)
     private readonly productRepo: Repository<BreakfastProduct>,
+    @InjectRepository(Vendor)
+    private readonly vendorRepo: Repository<Vendor>,
   ) {}
 
   async listCategories() {
@@ -42,6 +45,10 @@ export class BreakfastService {
   async createProduct(payload: Partial<BreakfastProduct>) {
     const category = await this.categoryRepo.findOne({ where: { id: payload.categoryId } });
     if (!category) throw new NotFoundException('分类不存在');
+    if (payload.vendorId) {
+      const vendor = await this.vendorRepo.findOne({ where: { id: payload.vendorId } });
+      if (!vendor) throw new NotFoundException('店家不存在');
+    }
     const created = this.productRepo.create(payload);
     return this.productRepo.save(created);
   }
@@ -50,6 +57,10 @@ export class BreakfastService {
     if (payload.categoryId) {
       const category = await this.categoryRepo.findOne({ where: { id: payload.categoryId } });
       if (!category) throw new NotFoundException('分类不存在');
+    }
+    if (payload.vendorId) {
+      const vendor = await this.vendorRepo.findOne({ where: { id: payload.vendorId } });
+      if (!vendor) throw new NotFoundException('店家不存在');
     }
     await this.productRepo.update({ id }, payload);
     return this.productRepo.findOne({ where: { id }, relations: ['category'] });

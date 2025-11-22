@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, Req, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SimpleAuthGuard } from '../common/simple-auth.guard';
@@ -19,7 +19,7 @@ export class AccountsController {
   ) {}
 
   @Get('me')
-  async getMe(req: AuthedRequest) {
+  async getMe(@Req() req: AuthedRequest) {
     const user = extractUserFromRequest(req);
     const account = await this.accountsService.getOrCreatePersonalAccountForUser(user.id);
     return {

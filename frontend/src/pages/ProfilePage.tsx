@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchPersonalAccount } from '../utils/api';
 import { useAuth } from '../state/AuthContext';
 
@@ -10,6 +11,7 @@ interface AccountInfo {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [error, setError] = useState('');
 
@@ -17,16 +19,15 @@ export default function ProfilePage() {
     async function load() {
       try {
         const res = (await fetchPersonalAccount()) as { account: Partial<AccountInfo> };
-        // 防止后端缺少阈值字段导致渲染 toFixed 报错
         setAccount({
           balance: res.account.balance ?? 0,
           reminder_threshold: res.account.reminder_threshold ?? 25,
           danger_threshold: res.account.danger_threshold ?? 3,
         });
-      } catch (err) {
-        console.warn('Use placeholder account', err);
-        setError('未能加载账户信息，以下为示例数据');
-        setAccount({ balance: 52.3, reminder_threshold: 25, danger_threshold: 3 });
+        setError('');
+      } catch (err: any) {
+        console.error('加载账户信息失败', err);
+        setError('无法加载账户信息，请截图错误并联系站点管理员。');
       }
     }
     load();
@@ -35,11 +36,20 @@ export default function ProfilePage() {
   const formatAmount = (value: number | undefined) =>
     typeof value === 'number' ? value.toFixed(2) : '—';
 
+  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+
   return (
     <div className="card">
-      <div className="section-title">
-        <h3>个人中心</h3>
-        {error && <span className="tag">{error}</span>}
+      <div className="section-title" style={{ alignItems: 'center', gap: 12 }}>
+        <div>
+          <h3>个人中心</h3>
+          {error && <span className="tag" style={{ background: '#fecdd3', color: '#b91c1c' }}>{error}</span>}
+        </div>
+        {isAdmin && (
+          <button className="pill-button secondary" onClick={() => navigate('/admin')}>
+            进入管理面板
+          </button>
+        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
         <div>

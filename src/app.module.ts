@@ -10,6 +10,9 @@ import { UsersModule } from './users/users.module';
 import { ReportsModule } from './reports/reports.module';
 import { BreakfastModule } from './breakfast/breakfast.module';
 import { OrdersModule } from './orders/orders.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { VendorsModule } from './vendors/vendors.module';
+import { SystemController } from './system/system.controller';
 
 @Module({
   imports: [
@@ -37,6 +40,9 @@ import { OrdersModule } from './orders/orders.module';
     ReportsModule,
     BreakfastModule,
     OrdersModule,
+    AnnouncementsModule,
+    VendorsModule,
   ],
+  controllers: [SystemController],
 })
 export class AppModule {}

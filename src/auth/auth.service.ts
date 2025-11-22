@@ -38,8 +38,8 @@ export class AuthService implements OnModuleInit {
     return email.trim().toLowerCase();
   }
 
-  private normalizeCode(code: string) {
-    return code.trim();
+  private normalizeCode(code: string | number | undefined | null) {
+    return String(code ?? '').trim();
   }
 
   constructor(
@@ -339,9 +339,10 @@ export class AuthService implements OnModuleInit {
 
   private async assertValidRegisterCode(email: string, code: string) {
     const record = await this.emailCodesRepository.findOne({
-      where: { email, purpose: 'REGISTER', code },
+      where: { email, purpose: 'REGISTER' },
       order: { createdAt: 'DESC' },
     });
+
     const expiresAt = record?.expiresAt
       ? record.expiresAt instanceof Date
         ? record.expiresAt
@@ -349,6 +350,10 @@ export class AuthService implements OnModuleInit {
       : null;
 
     if (!record || !expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('验证码错误或已过期');
+    }
+
+    if (this.normalizeCode(record.code) !== this.normalizeCode(code)) {
       throw new BadRequestException('验证码错误或已过期');
     }
   }

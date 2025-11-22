@@ -139,7 +139,7 @@ export async function reviewRecharge(id: number, approve: boolean, comment?: str
 }
 
 export async function fetchUsers() {
-  return request('/users');
+  return request('/admin/users');
 }
 
 export async function adminCreateUser(payload: AdminCreateUserPayload) {
@@ -150,7 +150,7 @@ export async function adminCreateUser(payload: AdminCreateUserPayload) {
 }
 
 export async function updateUserStatus(userId: number, enabled: boolean) {
-  return request(`/users/${userId}`, {
+  return request(`/admin/users/${userId}`, {
     method: 'PUT',
     body: JSON.stringify({ status: enabled ? 1 : 0 }),
   });

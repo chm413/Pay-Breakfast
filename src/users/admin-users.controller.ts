@@ -1,12 +1,26 @@
-import { Body, Controller, ForbiddenException, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { AccountsService } from '../accounts/accounts.service';
 import { SimpleAuthGuard } from '../common/simple-auth.guard';
 import { Role } from '../entities/role.entity';
 import { UserRole } from '../entities/user-role.entity';
 import { User } from '../entities/user.entity';
+import { Transaction } from '../entities/transaction.entity';
 
 function ensureAdmin(req: any) {
   const roles: string[] = req.user?.roles || [];
@@ -27,6 +41,15 @@ export class AdminUsersController {
     private readonly userRolesRepository: Repository<UserRole>,
     private readonly accountsService: AccountsService,
   ) {}
+
+  @Get()
+  async list(@Body() _body: any, req: any) {
+    ensureAdmin(req);
+    return this.usersRepository.find({
+      where: {},
+      order: { createdAt: 'DESC' },
+    });
+  }
 
   @Post()
   async createUser(@Body() body: any, req: any) {
@@ -72,5 +95,103 @@ export class AdminUsersController {
     return Array.from({ length: 10 })
       .map(() => alphabet.charAt(Math.floor(Math.random() * alphabet.length)))
       .join('');
+  }
+
+  @Put(':id')
+  async updateUser(@Param('id', ParseIntPipe) id: number, @Body() body: any, req: any) {
+    ensureAdmin(req);
+    await this.usersRepository.update({ id }, {
+      realName: body.realName,
+      classOrDorm: body.classOrDorm,
+      email: body.email,
+      status: body.enabled ? 1 : 0,
+    });
+    return { id };
+  }
+
+  @Put(':id/password')
+  async updatePassword(@Param('id', ParseIntPipe) id: number, @Body('newPassword') newPassword: string, req: any) {
+    ensureAdmin(req);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update({ id }, { passwordHash });
+    return { id };
+  }
+
+  @Delete(':id')
+  async softDelete(@Param('id', ParseIntPipe) id: number, req: any) {
+    ensureAdmin(req);
+    await this.usersRepository.update({ id }, { status: 0 });
+    return { id, status: 'disabled' };
+  }
+
+  @Get(':id/transactions')
+  async listTransactions(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    req?: any,
+  ) {
+    ensureAdmin(req);
+    const user = await this.usersRepository.findOne({ where: { id }, relations: ['accounts'] });
+    if (!user) throw new NotFoundException('User not found');
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
+    const where: any = { account: { id: account.id } };
+    if (from && to) {
+      where.createdAt = Between(new Date(from), new Date(to));
+    }
+    return this.userRolesRepository.manager.getRepository(Transaction).find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  @Post(':id/transactions')
+  async createTransaction(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    req: any,
+  ) {
+    ensureAdmin(req);
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
+    const direction = body.type === 'CONSUME' ? -1 : 1;
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const tx = txRepo.create({
+      account,
+      type: body.type || 'ADJUST',
+      direction,
+      amount: Number(body.amount || 0).toFixed(2),
+      balanceAfter: account.balance,
+      description: body.remark,
+      sourceType: 'ADMIN_MANUAL',
+      operatorUserId: req.user?.id,
+    });
+    await txRepo.save(tx);
+    await this.accountsService.recalculateAccountBalance(account.id);
+    return tx;
+  }
+
+  @Put('/transactions/:txId')
+  async updateTransaction(@Param('txId', ParseIntPipe) txId: number, @Body() body: any, req: any) {
+    ensureAdmin(req);
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });
+    if (!existing) throw new NotFoundException('Transaction not found');
+    existing.amount = Number(body.amount ?? existing.amount).toFixed(2) as any;
+    existing.type = body.type || existing.type;
+    existing.description = body.remark ?? existing.description;
+    await txRepo.save(existing);
+    await this.accountsService.recalculateAccountBalance(existing.account.id);
+    return existing;
+  }
+
+  @Delete('/transactions/:txId')
+  async deleteTransaction(@Param('txId', ParseIntPipe) txId: number, req: any) {
+    ensureAdmin(req);
+    const txRepo = this.userRolesRepository.manager.getRepository(Transaction);
+    const existing = await txRepo.findOne({ where: { id: txId }, relations: ['account'] });
+    if (!existing) throw new NotFoundException('Transaction not found');
+    await txRepo.delete({ id: txId });
+    await this.accountsService.recalculateAccountBalance(existing.account.id);
+    return { id: txId, status: 'deleted' };
   }
 }

@@ -13,8 +13,12 @@ export function getJwtSecret(): string {
   return process.env.JWT_SECRET || 'dev-secret';
 }
 
-export function extractUserFromRequest(req: Request): AuthUser {
-  const header = req.headers.authorization || '';
+export function extractUserFromRequest(req?: Request): AuthUser {
+  if (!req) {
+    throw new UnauthorizedException('缺少鉴权信息');
+  }
+
+  const header = req.headers?.authorization || '';
   const [, token] = header.split(' ');
   if (!token) {
     throw new UnauthorizedException('缺少鉴权信息');

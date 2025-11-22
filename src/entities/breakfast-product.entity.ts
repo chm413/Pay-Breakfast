@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { BreakfastCategory } from './breakfast-category.entity';
+import { Vendor } from './vendor.entity';
 
 @Entity('breakfast_products')
 export class BreakfastProduct {
@@ -20,6 +21,13 @@ export class BreakfastProduct {
 
   @Column({ name: 'category_id', type: 'bigint' })
   categoryId!: number;
+
+  @ManyToOne(() => Vendor, { nullable: true })
+  @JoinColumn({ name: 'vendor_id' })
+  vendor?: Vendor;
+
+  @Column({ name: 'vendor_id', type: 'bigint', nullable: true })
+  vendorId?: number;
 
   @Column({ length: 64 })
   name!: string;
