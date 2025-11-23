@@ -14,6 +14,7 @@ import VendorManagementPage from './pages/admin/VendorManagementPage';
 import { useAuth } from './state/AuthContext';
 import AdminGuard from './components/AdminGuard';
 import AdminLayout from './layouts/AdminLayout';
+import { isAdminRoleList } from './utils/roles';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -25,7 +26,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
-  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+  const isAdmin = isAdminRoleList(user?.roles);
 
   const navItems = [
     { to: '/', label: '仪表盘', icon: '📊' },

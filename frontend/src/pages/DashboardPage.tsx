@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { DashboardSummary } from '../types';
 import { fetchDashboardSummary } from '../utils/api';
 import { useAuth } from '../state/AuthContext';
+import { isAdminRoleList } from '../utils/roles';
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+  const isAdmin = isAdminRoleList(user?.roles);
 
   useEffect(() => {
     async function load() {
@@ -25,7 +26,11 @@ export default function DashboardPage() {
       } catch (err: any) {
         setSummary(null);
         const detail = err?.message || '后端接口异常';
-        setError(`无法获取后台报表：${detail}。请截图并联系站点管理员。`);
+        const unauthorized = detail.includes('401') || detail.includes('鉴权');
+        const hint = unauthorized
+          ? '登录可能已失效，请重新登录后再试。'
+          : '请截图并联系站点管理员。';
+        setError(`无法获取后台报表：${detail}。${hint}`);
       } finally {
         setLoading(false);
       }

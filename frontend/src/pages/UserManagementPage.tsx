@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../state/AuthContext';
+import { ADMIN_ROLE_OPTIONS, isAdminRoleList } from '../utils/roles';
 import {
   adminCreateUser,
   createUserTransaction,
@@ -49,10 +50,7 @@ export default function UserManagementPage() {
   const [profileForm, setProfileForm] = useState({ email: '', qq: '', classOrDorm: '' });
   const [passwordForm, setPasswordForm] = useState('');
 
-  const isAdmin = useMemo(
-    () => currentUser?.roles?.includes('ADMIN') || currentUser?.roles?.includes('MANAGER'),
-    [currentUser]
-  );
+  const isAdmin = useMemo(() => isAdminRoleList(currentUser?.roles), [currentUser]);
 
   const loadUsers = async () => {
     try {
@@ -305,8 +303,11 @@ export default function UserManagementPage() {
                 value={createForm.role}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, role: e.target.value }))}
               >
-                <option value="ADMIN">ADMIN</option>
-                <option value="MANAGER">MANAGER</option>
+                {ADMIN_ROLE_OPTIONS.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
                 <option value="MEMBER">MEMBER</option>
               </select>
             </label>

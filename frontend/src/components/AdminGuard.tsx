@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../state/AuthContext';
+import { isAdminRoleList } from '../utils/roles';
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -8,7 +9,7 @@ interface AdminGuardProps {
 
 export default function AdminGuard({ children, fallback }: AdminGuardProps) {
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+  const isAdmin = isAdminRoleList(user?.roles);
 
   if (!isAdmin) {
     return (

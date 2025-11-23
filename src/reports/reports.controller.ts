@@ -1,12 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SimpleAuthGuard } from '../common/simple-auth.guard';
 import { ClassGroupOrder } from '../entities/class-group-order.entity';
 import { Student } from '../entities/student.entity';
 
 @Controller('reports')
-@UseGuards(SimpleAuthGuard)
 export class ReportsController {
   constructor(
     @InjectRepository(ClassGroupOrder)

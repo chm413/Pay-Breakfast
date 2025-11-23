@@ -20,7 +20,7 @@ interface AdminCreateUserPayload {
   username: string;
   realName: string;
   email: string;
-  role: 'ADMIN' | 'MANAGER' | 'MEMBER';
+  role: 'ADMIN' | 'MANAGER' | 'MEMBER' | 'SUPER_ADMIN' | 'GRADE_ADMIN';
   initialBalance: number;
   creditLimit: number;
   classOrDorm?: string;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchPersonalAccount } from '../utils/api';
 import { useAuth } from '../state/AuthContext';
+import { isAdminRoleList } from '../utils/roles';
 
 interface AccountInfo {
   balance: number;
@@ -36,7 +37,7 @@ export default function ProfilePage() {
   const formatAmount = (value: number | undefined) =>
     typeof value === 'number' ? value.toFixed(2) : '—';
 
-  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER');
+  const isAdmin = isAdminRoleList(user?.roles);
 
   return (
     <div className="card">
