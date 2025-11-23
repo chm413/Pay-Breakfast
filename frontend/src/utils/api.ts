@@ -1,6 +1,5 @@
 import { JSEncrypt } from 'jsencrypt';
 import { BreakfastCategory, BreakfastProduct, PublicHighlights, UserProfile } from '../types';
-import { redirectToAppRoot } from './redirect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -39,15 +38,6 @@ interface BatchOrderPayload {
 
 let cachedPublicKey: string | null = null;
 
-function clearAuthAndRedirect(reason?: string) {
-  localStorage.removeItem('pb_token');
-  localStorage.removeItem('pb_user');
-  if (reason) {
-    console.warn(reason);
-  }
-  redirectToAppRoot();
-}
-
 async function fetchPublicKey(): Promise<string> {
   if (cachedPublicKey) return cachedPublicKey;
   const data = await request<{ publicKey: string }>('/auth/public-key');
@@ -77,10 +67,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-  if (res.status === 401) {
-    clearAuthAndRedirect('unauthorized');
-    throw new Error('登录已过期，请重新登录');
-  }
   if (!res.ok) {
     const bodyText = await res.text();
     const detail = bodyText ? bodyText.slice(0, 400) : res.statusText;
