@@ -31,6 +31,7 @@ import { SystemController } from './system/system.controller';
       entities: Object.values(entities),
       synchronize: true,
     }),
+    TypeOrmModule.forFeature([entities.User, entities.Order, entities.Transaction]),
     AccountsModule,
     AuthModule,
     ClassOrdersModule,
