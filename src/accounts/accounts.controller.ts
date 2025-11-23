@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseIntPipe, Query, Req, UseGuards } from '@ne
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SimpleAuthGuard } from '../common/simple-auth.guard';
-import { extractUserFromRequest } from '../common/jwt.util';
+import { assertAuthenticated, extractUserFromRequest } from '../common/jwt.util';
 import { Transaction } from '../entities/transaction.entity';
 import { AccountsService } from './accounts.service';
 import { Request } from 'express';
@@ -20,7 +20,8 @@ export class AccountsController {
 
   @Get('me')
   async getMe(@Req() req: AuthedRequest) {
-    const user = req?.user || extractUserFromRequest(req);
+    const user = req?.user || extractUserFromRequest(req, { allowMissing: true });
+    assertAuthenticated(user);
     const account = await this.accountsService.getOrCreatePersonalAccountForUser(user.id);
     return {
       id: account.id,
