@@ -83,6 +83,13 @@ export default function DashboardPage() {
             emoji="🛒"
           />
           <Callout
+            title="余额充值"
+            description="提交充值申请，待审核后自动到账"
+            linkText="去充值"
+            href="/recharge"
+            emoji="💳"
+          />
+          <Callout
             title="公告通知"
             description="查看平台公告与重要通知（只读）"
             linkText="前往查看"

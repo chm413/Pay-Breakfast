@@ -19,11 +19,11 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = (await fetchPersonalAccount()) as { account: Partial<AccountInfo> };
+        const res = (await fetchPersonalAccount()) as any;
         setAccount({
-          balance: res.account.balance ?? 0,
-          reminder_threshold: res.account.reminder_threshold ?? 25,
-          danger_threshold: res.account.danger_threshold ?? 3,
+          balance: Number(res.balance ?? res.account?.balance ?? 0),
+          reminder_threshold: Number(res.reminderThreshold ?? res.account?.reminder_threshold ?? 25),
+          danger_threshold: Number(res.dangerThreshold ?? res.account?.danger_threshold ?? 3),
         });
         setError('');
       } catch (err: any) {

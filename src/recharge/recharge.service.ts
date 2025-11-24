@@ -16,12 +16,23 @@ export class RechargeService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async listRequests(status?: string) {
-    const where = status ? { status } : {};
+  async listRequests(status: string | undefined, user?: { id: number; roles?: string[] }) {
+    const roles = user?.roles || [];
+    const isAdmin = roles.some((r) => ['ADMIN', 'SUPER_ADMIN', 'MANAGER'].includes(r));
+
+    const where: any = {};
+    if (status) where.status = status;
+
+    if (!isAdmin) {
+      const account = await this.accountsService.getOrCreatePersonalAccountForUser(user?.id || 0);
+      where.account = { id: account.id };
+    }
+
     const records = await this.rechargeRequestsRepository.find({
       where,
       relations: ['account', 'student', 'reviewer'],
       order: { createdAt: 'DESC' },
+      take: isAdmin ? 200 : 50,
     });
     return records.map((item) => ({
       id: item.id,
@@ -37,9 +48,14 @@ export class RechargeService {
   }
 
   async createRequest(userId: number, dto: CreateRechargeRequestDto) {
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(userId);
+    if (dto.accountId && Number(dto.accountId) !== account.id) {
+      throw new NotFoundException('账户与当前用户不匹配');
+    }
+    const studentId = account.student?.id || dto.studentId;
     const request = this.rechargeRequestsRepository.create({
-      account: { id: dto.accountId } as any,
-      student: dto.studentId ? ({ id: dto.studentId } as Student) : undefined,
+      account: { id: account.id } as any,
+      student: studentId ? ({ id: studentId } as Student) : undefined,
       amount: dto.amount.toFixed(2),
       payMethod: dto.payMethod,
       voucherImageUrl: dto.voucherImageUrl,

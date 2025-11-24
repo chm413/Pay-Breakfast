@@ -21,6 +21,10 @@ export class AnnouncementsService {
     return this.repo.find({ where: { enabled: true, showOnLogin: true }, order: { createdAt: 'DESC' }, take: 5 });
   }
 
+  async listPublic(): Promise<Announcement[]> {
+    return this.repo.find({ where: { enabled: true }, order: { createdAt: 'DESC' }, take: 50 });
+  }
+
   async listAdmin(req: any) {
     this.ensureAdmin(req);
     return this.repo.find({ order: { createdAt: 'DESC' } });

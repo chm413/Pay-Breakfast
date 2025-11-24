@@ -207,6 +207,19 @@ export default function PersonalOrderPage() {
                         <div className="muted" style={{ fontSize: 13 }}>
                           数量：{item.quantity} · 商品 ID：{item.productId}
                         </div>
+                        {item.status && (
+                          <div>
+                            <span
+                              className="chip"
+                              style={{
+                                background: item.status === 'success' ? '#dcfce7' : '#fee2e2',
+                                color: item.status === 'success' ? '#166534' : '#b91c1c',
+                              }}
+                            >
+                              {item.status === 'success' ? '支付成功' : `失败：${item.failReason || '余额不足'}`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <span className="chip" style={{ background: '#e0f2fe', color: '#075985' }}>
                         ¥ {Number(item.price || product?.price || 0).toFixed(2)}
@@ -217,9 +230,42 @@ export default function PersonalOrderPage() {
               </div>
             </div>
           )}
-          <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <div className="card" style={{ border: '1px solid var(--border)', background: '#fff' }}>
+            <div className="section-title" style={{ marginBottom: 6 }}>
+              <div>
+                <h5 style={{ margin: 0 }}>订单状态</h5>
+                <p className="muted" style={{ margin: 0 }}>成功或失败原因一目了然</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span
+                className="chip"
+                style={{
+                  background:
+                    result.status === 'success'
+                      ? '#dcfce7'
+                      : result.status === 'partially_success'
+                        ? '#fef9c3'
+                        : '#fee2e2',
+                  color:
+                    result.status === 'success'
+                      ? '#166534'
+                      : result.status === 'partially_success'
+                        ? '#92400e'
+                        : '#b91c1c',
+                }}
+              >
+                {result.status === 'success'
+                  ? '下单成功'
+                  : result.status === 'partially_success'
+                    ? '部分成功，部分失败'
+                    : '下单失败'}
+              </span>
+              <span className="muted">合计金额：¥ {Number(result.totalAmount || 0).toFixed(2)}</span>
+              {result.id && <span className="muted">订单号：{result.id}</span>}
+              {result.errorMessage && <span className="tag">{result.errorMessage}</span>}
+            </div>
+          </div>
         </div>
       )}
     </div>

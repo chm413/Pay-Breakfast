@@ -127,8 +127,18 @@ export async function fetchPublicHighlights(): Promise<PublicHighlights> {
   return request('/public/highlights');
 }
 
-export async function fetchRechargeRequests() {
-  return request('/recharge-requests?status=pending');
+export async function fetchRechargeRequests(status?: string) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  return request(`/recharge-requests${query}`);
+}
+
+export async function createRechargeRequest(payload: {
+  amount: number;
+  payMethod: string;
+  voucherImageUrl?: string;
+  accountId?: number;
+}) {
+  return request('/recharge-requests', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function reviewRecharge(id: number, approve: boolean, comment?: string) {
@@ -305,6 +315,10 @@ export async function deleteAdminAnnouncement(id: number) {
 
 export async function fetchLoginAnnouncements() {
   return request('/announcements/login-popups');
+}
+
+export async function fetchPublicAnnouncements() {
+  return request('/announcements/public');
 }
 
 export async function fetchSystemStatus() {
