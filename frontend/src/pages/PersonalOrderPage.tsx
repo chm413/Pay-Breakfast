@@ -31,12 +31,20 @@ export default function PersonalOrderPage() {
     load();
   }, []);
 
-  const grouped = useMemo(() => {
+  const productMap = useMemo<Record<string, OrderSelection[]>>(() => {
     const map: Record<string, OrderSelection[]> = {};
     products.forEach((p) => {
-      const key = p.categoryName || '未分组';
+      const key = p.vendorName || p.categoryName || '未分组';
       if (!map[key]) map[key] = [];
       map[key].push(p);
+    });
+    return map;
+  }, [products]);
+
+  const productById = useMemo<Record<number, OrderSelection>>(() => {
+    const map: Record<number, OrderSelection> = {};
+    products.forEach((p) => {
+      map[p.id] = p;
     });
     return map;
   }, [products]);
@@ -124,7 +132,7 @@ export default function PersonalOrderPage() {
         <div className="card" style={{ border: '1px dashed var(--border)' }}>加载中...</div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {Object.entries(grouped).map(([category, items]) => (
+          {(Object.entries(productMap) as [string, OrderSelection[]][]).map(([category, items]) => (
             <div key={category} className="card" style={{ border: '1px solid var(--border)', background: '#fff' }}>
               <div className="section-title" style={{ marginBottom: 8 }}>
                 <div>
@@ -141,7 +149,7 @@ export default function PersonalOrderPage() {
                         <div style={{ fontWeight: 700 }}>{item.name}</div>
                         <div className="muted" style={{ fontSize: 13 }}>¥ {Number(item.price).toFixed(2)} / {item.unit || '份'}</div>
                       </div>
-                      <span className="chip" style={{ background: '#f1f5f9', color: '#0f172a' }}>{item.categoryName || category}</span>
+                      <span className="chip" style={{ background: '#f1f5f9', color: '#0f172a' }}>{item.vendorName || item.categoryName || category}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                       <button className="pill" style={{ minWidth: 36, textAlign: 'center' }} onClick={() => updateQuantity(item.id, Number(item.quantity) - 1)}>
@@ -169,6 +177,46 @@ export default function PersonalOrderPage() {
       {result && (
         <div className="card" style={{ marginTop: 4, border: '1px solid var(--border)', background: '#f8fafc' }}>
           <h4 style={{ marginTop: 0 }}>下单结果</h4>
+          {Array.isArray(result?.items) && result.items.length > 0 && (
+            <div className="card" style={{ border: '1px dashed var(--border)', background: '#fff' }}>
+              <div className="section-title" style={{ marginBottom: 8 }}>
+                <div>
+                  <h5 style={{ margin: 0 }}>商品明细</h5>
+                  <p className="muted" style={{ margin: 0 }}>以下名称由本地商品列表匹配</p>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {result.items.map((item: any) => {
+                  const product = productById[item.productId];
+                  const name = product?.name || `商品 #${item.productId}`;
+                  return (
+                    <div
+                      key={`${item.productId}-${item.quantity}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        padding: '8px 10px',
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div style={{ display: 'grid', gap: 2 }}>
+                        <div style={{ fontWeight: 700 }}>{name}</div>
+                        <div className="muted" style={{ fontSize: 13 }}>
+                          数量：{item.quantity} · 商品 ID：{item.productId}
+                        </div>
+                      </div>
+                      <span className="chip" style={{ background: '#e0f2fe', color: '#075985' }}>
+                        ¥ {Number(item.price || product?.price || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
             {JSON.stringify(result, null, 2)}
           </pre>
