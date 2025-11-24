@@ -18,6 +18,8 @@ export interface BreakfastProduct {
   id: number;
   categoryId: number;
   categoryName?: string;
+  vendorId?: number;
+  vendorName?: string;
   name: string;
   price: number;
   unit: string;
