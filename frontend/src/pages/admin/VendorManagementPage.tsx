@@ -18,14 +18,25 @@ import { BreakfastCategory, BreakfastProduct, Vendor, VendorSettlement } from '.
 export default function VendorManagementPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [summary, setSummary] = useState<number>(0);
+  const [summary, setSummary] = useState<{ total: number; byCategory: { categoryName: string; ordersCount: number; totalAmount: number }[] }>({
+    total: 0,
+    byCategory: [],
+  });
   const [products, setProducts] = useState<BreakfastProduct[]>([]);
   const [settlements, setSettlements] = useState<VendorSettlement[]>([]);
   const [categories, setCategories] = useState<BreakfastCategory[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [vendorForm, setVendorForm] = useState({ name: '', remark: '', enabled: true });
-  const [productForm, setProductForm] = useState({ name: '', price: 0, unit: '份', enabled: true, remark: '', categoryId: 0 });
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: 0,
+    unit: '份',
+    enabled: true,
+    remark: '',
+    categoryId: 0,
+  });
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const selectedVendor = useMemo(() => vendors.find((v) => v.id === selectedId) || null, [vendors, selectedId]);
 
@@ -53,12 +64,24 @@ export default function VendorManagementPage() {
     async function loadDetails() {
       if (!selectedId) return;
       try {
-        const summaryRes = (await fetchVendorSummary(selectedId)) as { totalAmount?: number };
-        setSummary((summaryRes.totalAmount as number | undefined) || 0);
+        const summaryRes = (await fetchVendorSummary(selectedId)) as { totalAmount?: number; byCategory?: any[] };
+        setSummary({
+          total: (summaryRes.totalAmount as number | undefined) || 0,
+          byCategory: (summaryRes.byCategory || []).map((c: any) => ({
+            categoryName: c.categoryName || '未分类',
+            ordersCount: Number(c.ordersCount || 0),
+            totalAmount: Number(c.totalAmount || 0),
+          })),
+        });
         const prods = (await getAdminProducts({ vendorId: selectedId })) as BreakfastProduct[];
         setProducts(prods);
         const settle = (await fetchVendorSettlements(selectedId)) as any[];
-        setSettlements(settle as VendorSettlement[]);
+        setSettlements(
+          (settle as VendorSettlement[]).map((s: any) => ({
+            ...s,
+            categoryName: (s as any).category?.name || (s as any).categoryName || null,
+          })),
+        );
       } catch (err: any) {
         setError(err?.message || '加载店家详情失败');
       }
@@ -92,8 +115,13 @@ export default function VendorManagementPage() {
     try {
       const payload = { ...productForm, price: Number(productForm.price), vendorId: selectedId } as any;
       payload.categoryId = Number(productForm.categoryId || (categories[0]?.id ?? 0));
-      await createAdminProduct(payload);
+      if (editingProductId) {
+        await updateAdminProduct(editingProductId, payload);
+      } else {
+        await createAdminProduct(payload);
+      }
       setProductForm({ name: '', price: 0, unit: '份', enabled: true, remark: '', categoryId: 0 });
+      setEditingProductId(null);
       const prods = (await getAdminProducts({ vendorId: selectedId })) as BreakfastProduct[];
       setProducts(prods);
     } catch (err: any) {
@@ -191,7 +219,16 @@ export default function VendorManagementPage() {
               <div className="section-title" style={{ justifyContent: 'space-between' }}>
                 <div>
                   <h4>{selectedVendor.name}</h4>
-                  <p className="muted">累计消费：¥ {summary.toFixed(2)}</p>
+                  <p className="muted">累计消费：¥ {summary.total.toFixed(2)}</p>
+                  {summary.byCategory.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                      {summary.byCategory.map((c) => (
+                        <span key={c.categoryName} className="chip" style={{ background: '#f1f5f9', color: '#0f172a' }}>
+                          {c.categoryName}: ¥ {c.totalAmount.toFixed(2)} / {c.ordersCount} 单
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -203,6 +240,7 @@ export default function VendorManagementPage() {
                   <thead>
                     <tr>
                       <th>名称</th>
+                      <th>分类</th>
                       <th>价格</th>
                       <th>单位</th>
                       <th>状态</th>
@@ -213,10 +251,28 @@ export default function VendorManagementPage() {
                     {products.map((p) => (
                       <tr key={p.id}>
                         <td>{p.name}</td>
+                        <td>{p.categoryName || '未分类'}</td>
                         <td>¥ {Number(p.price).toFixed(2)}</td>
                         <td>{p.unit}</td>
                         <td>{p.enabled ? '启用' : '下架'}</td>
                         <td>
+                          <button
+                            className="button-secondary"
+                            style={{ marginRight: 6 }}
+                            onClick={() => {
+                              setEditingProductId(p.id);
+                              setProductForm({
+                                name: p.name,
+                                price: Number(p.price),
+                                unit: p.unit,
+                                enabled: p.enabled,
+                                remark: p.remark || '',
+                                categoryId: p.categoryId || 0,
+                              });
+                            }}
+                          >
+                            编辑
+                          </button>
                           <button className="button-secondary" style={{ marginRight: 6 }} onClick={() => toggleProduct(p)}>
                             {p.enabled ? '下架' : '上架'}
                           </button>
@@ -282,7 +338,7 @@ export default function VendorManagementPage() {
                       启用
                     </label>
                     <button className="button-primary" onClick={saveProduct}>
-                      添加商品
+                      {editingProductId ? '保存修改' : '添加商品'}
                     </button>
                   </div>
                 </div>
@@ -299,6 +355,7 @@ export default function VendorManagementPage() {
                     <thead>
                       <tr>
                         <th>日期</th>
+                        <th>分类</th>
                         <th>单数</th>
                         <th>金额</th>
                       </tr>
@@ -307,6 +364,7 @@ export default function VendorManagementPage() {
                       {settlements.map((s) => (
                         <tr key={s.id}>
                           <td>{s.date}</td>
+                          <td>{s.categoryName || '未分类'}</td>
                           <td>{s.ordersCount}</td>
                           <td>¥ {Number(s.totalAmount).toFixed(2)}</td>
                         </tr>

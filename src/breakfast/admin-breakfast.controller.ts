@@ -39,10 +39,17 @@ export class AdminBreakfastController {
   }
 
   @Get('products')
-  async listProducts(@Query('categoryId') categoryId?: string, @Query('enabled') enabled?: string) {
+  async listProducts(
+    @Query('categoryId') categoryId?: string,
+    @Query('enabled') enabled?: string,
+    @Query('includeDeleted') includeDeleted?: string,
+    @Query('vendorId') vendorId?: string,
+  ) {
     return this.breakfastService.listProducts({
       categoryId: categoryId ? Number(categoryId) : undefined,
+      vendorId: vendorId ? Number(vendorId) : undefined,
       enabled: enabled !== undefined ? enabled !== '0' && enabled !== 'false' : undefined,
+      includeDeleted: includeDeleted === '1' || includeDeleted === 'true',
     });
   }
 
@@ -58,9 +65,15 @@ export class AdminBreakfastController {
     return this.breakfastService.updateProduct(id, body);
   }
 
+  @Put('products/:id/disable')
+  async disableProduct(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    ensureAdminOrManager(req);
+    return this.breakfastService.disableProduct(id);
+  }
+
   @Delete('products/:id')
   async deleteProduct(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     ensureAdminOrManager(req);
-    return this.breakfastService.disableProduct(id);
+    return this.breakfastService.deleteProduct(id);
   }
 }

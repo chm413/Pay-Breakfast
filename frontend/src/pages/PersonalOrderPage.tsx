@@ -169,9 +169,49 @@ export default function PersonalOrderPage() {
       {result && (
         <div className="card" style={{ marginTop: 4, border: '1px solid var(--border)', background: '#f8fafc' }}>
           <h4 style={{ marginTop: 0 }}>下单结果</h4>
-          <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="stat-card">
+              <div className="muted">订单状态</div>
+              <div style={{ fontWeight: 700 }}>{result.status}</div>
+            </div>
+            <div className="stat-card">
+              <div className="muted">总金额</div>
+              <div style={{ fontWeight: 700 }}>¥ {Number(result.totalAmount || 0).toFixed(2)}</div>
+            </div>
+            <div className="stat-card">
+              <div className="muted">成功项</div>
+              <div style={{ fontWeight: 700 }}>
+                {(result.items || []).filter((i: any) => i.status === 'success').length}/{result.items?.length || 0}
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>商品</th>
+                  <th>数量</th>
+                  <th>金额</th>
+                  <th>状态</th>
+                  <th>原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(result.items || []).map((item: any) => {
+                  const name = productMap[item.productId]?.name || `商品 #${item.productId}`;
+                  return (
+                    <tr key={item.id}>
+                      <td>{name}</td>
+                      <td>{item.quantity}</td>
+                      <td>¥ {Number(item.amount || 0).toFixed(2)}</td>
+                      <td style={{ color: item.status === 'success' ? '#15803d' : '#b91c1c' }}>{item.status}</td>
+                      <td>{item.failReason || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
