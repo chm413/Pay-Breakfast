@@ -198,20 +198,12 @@ export class AdminUsersController {
     @Req() req?: any,
   ) {
     ensureAdmin(req);
-    try {
-      const user = await this.usersRepository.findOne({ where: { id } });
-      if (!user) throw new NotFoundException('User not found');
-      const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
-      const where: any = { account: { id: account.id } };
-      if (from && to) {
-        where.createdAt = Between(new Date(from), new Date(to));
-      }
-      return this.userRolesRepository.manager.getRepository(Transaction).find({
-        where,
-        order: { createdAt: 'DESC' },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException({ code: 'ADMIN_USER_TRANSACTIONS_FAILED', message: (error as Error).message });
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
+    const where: any = { account: { id: account.id } };
+    if (from && to) {
+      where.createdAt = Between(new Date(from), new Date(to));
     }
   }
 

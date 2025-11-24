@@ -75,10 +75,20 @@ export default function DashboardPage() {
           <span className="tag">常用操作</span>
         </div>
         <div className="card-grid">
-          <Callout title="我要下单" description="选择商品直接扣款，锁定下单时价格" linkText="进入下单" href="/order" emoji="🛒" isAdmin={isAdmin} />
-          <Callout title="批量下单" description="管理员批量为多位成员下单并结算" linkText="开始批量下单" href="/admin/batch-order" emoji="📦" adminOnly isAdmin={isAdmin} />
-          <Callout title="充值审核" description="查看待审核的线下充值申请" linkText="前往审核" href="/admin/recharges" emoji="💳" adminOnly isAdmin={isAdmin} />
-          <Callout title="用户管理" description="创建成员、调整角色与额度" linkText="管理用户" href="/admin/users" emoji="🧑‍💼" adminOnly isAdmin={isAdmin} />
+          <Callout
+            title="我要下单"
+            description="选择早餐商品并提交个人订单"
+            linkText="立即下单"
+            href="/order"
+            emoji="🛒"
+          />
+          <Callout
+            title="公告通知"
+            description="查看平台公告与重要通知（只读）"
+            linkText="前往查看"
+            href="/announcements"
+            emoji="📣"
+          />
         </div>
       </div>
     </div>
