@@ -21,6 +21,7 @@ export default function AnnouncementPage() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [form, setForm] = useState<FormState>({ title: '', contentMd: '', showOnLogin: false, enabled: true });
+  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     try {
@@ -47,10 +48,19 @@ export default function AnnouncementPage() {
         showOnLogin: item.showOnLogin,
         enabled: item.enabled,
       });
-    } else {
-      setEditing(null);
-      setForm({ title: '', contentMd: '', showOnLogin: false, enabled: true });
+      setShowForm(true);
+      return;
     }
+
+    setEditing(null);
+    setForm({ title: '', contentMd: '', showOnLogin: false, enabled: true });
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setEditing(null);
+    setForm({ title: '', contentMd: '', showOnLogin: false, enabled: true });
+    setShowForm(false);
   }
 
   async function submit() {
@@ -61,7 +71,7 @@ export default function AnnouncementPage() {
         await createAdminAnnouncement(form);
       }
       await load();
-      startEdit();
+      closeForm();
     } catch (err: any) {
       setError(err?.message || '保存失败');
     }
@@ -119,11 +129,11 @@ export default function AnnouncementPage() {
         </table>
       )}
 
-      {(editing || form.title || form.contentMd) && (
+      {showForm && (
         <div className="card" style={{ marginTop: 14 }}>
           <div className="section-title">
             <h4>{editing ? '编辑公告' : '新建公告'}</h4>
-            <button className="button-secondary" onClick={() => startEdit()}>
+            <button className="button-secondary" onClick={closeForm}>
               关闭
             </button>
           </div>

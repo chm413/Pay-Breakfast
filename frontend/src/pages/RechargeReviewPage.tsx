@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RechargeRequestItem } from '../types';
-import { fetchRechargeRequestsAdmin, reviewRechargeAdmin } from '../utils/api';
+import { fetchRechargeRequestsAdmin, recheckPassword, reviewRechargeAdmin } from '../utils/api';
 
 export default function RechargeReviewPage() {
   const [items, setItems] = useState<RechargeRequestItem[]>([]);
@@ -26,16 +26,34 @@ export default function RechargeReviewPage() {
     load();
   }, []);
 
-  async function handleReview(id: number, approve: boolean) {
+  async function handleReview(id: number, approve: boolean, allowRetry = true) {
     try {
       await reviewRechargeAdmin(id, approve);
       setItems((prev) => prev.filter((i) => i.id !== id));
       const refreshedDone = (await fetchRechargeRequestsAdmin('approved')) as RechargeRequestItem[];
       const refreshedRejected = (await fetchRechargeRequestsAdmin('rejected')) as RechargeRequestItem[];
       setReviewed([...refreshedDone, ...refreshedRejected].map((item) => ({ ...item, amount: Number(item.amount ?? 0) })));
-    } catch (err) {
+      setError('');
+    } catch (err: any) {
+      const message = err?.message || '审核失败，请检查网络或权限';
+      const code = err?.code;
+      if (allowRetry && (code === 'RECENT_VERIFY_REQUIRED' || message.includes('RECENT_VERIFY_REQUIRED'))) {
+        const password = window.prompt('敏感操作需要再次验证，请输入当前账号密码：');
+        if (!password) {
+          setError('已取消审核，需完成二次校验');
+          return;
+        }
+        try {
+          await recheckPassword(password);
+          await handleReview(id, approve, false);
+          return;
+        } catch (verifyErr: any) {
+          setError(verifyErr?.message || '二次校验失败，请重试');
+          return;
+        }
+      }
       console.error(err);
-      setError('审核失败，请检查网络或权限');
+      setError(message);
     }
   }
 
