@@ -41,6 +41,14 @@ export default function PersonalOrderPage() {
     return map;
   }, [products]);
 
+  const productById = useMemo<Record<number, OrderSelection>>(() => {
+    const map: Record<number, OrderSelection> = {};
+    products.forEach((p) => {
+      map[p.id] = p;
+    });
+    return map;
+  }, [products]);
+
   function updateQuantity(id: number, qty: number) {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, quantity: Math.max(0, qty) } : p)));
   }
@@ -169,49 +177,49 @@ export default function PersonalOrderPage() {
       {result && (
         <div className="card" style={{ marginTop: 4, border: '1px solid var(--border)', background: '#f8fafc' }}>
           <h4 style={{ marginTop: 0 }}>下单结果</h4>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div className="stat-card">
-              <div className="muted">订单状态</div>
-              <div style={{ fontWeight: 700 }}>{result.status}</div>
-            </div>
-            <div className="stat-card">
-              <div className="muted">总金额</div>
-              <div style={{ fontWeight: 700 }}>¥ {Number(result.totalAmount || 0).toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="muted">成功项</div>
-              <div style={{ fontWeight: 700 }}>
-                {(result.items || []).filter((i: any) => i.status === 'success').length}/{result.items?.length || 0}
+          {Array.isArray(result?.items) && result.items.length > 0 && (
+            <div className="card" style={{ border: '1px dashed var(--border)', background: '#fff' }}>
+              <div className="section-title" style={{ marginBottom: 8 }}>
+                <div>
+                  <h5 style={{ margin: 0 }}>商品明细</h5>
+                  <p className="muted" style={{ margin: 0 }}>以下名称由本地商品列表匹配</p>
+                </div>
               </div>
-            </div>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>商品</th>
-                  <th>数量</th>
-                  <th>金额</th>
-                  <th>状态</th>
-                  <th>原因</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(result.items || []).map((item: any) => {
-                  const name = productMap[item.productId]?.name || `商品 #${item.productId}`;
+              <div style={{ display: 'grid', gap: 6 }}>
+                {result.items.map((item: any) => {
+                  const product = productById[item.productId];
+                  const name = product?.name || `商品 #${item.productId}`;
                   return (
-                    <tr key={item.id}>
-                      <td>{name}</td>
-                      <td>{item.quantity}</td>
-                      <td>¥ {Number(item.amount || 0).toFixed(2)}</td>
-                      <td style={{ color: item.status === 'success' ? '#15803d' : '#b91c1c' }}>{item.status}</td>
-                      <td>{item.failReason || '-'}</td>
-                    </tr>
+                    <div
+                      key={`${item.productId}-${item.quantity}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        padding: '8px 10px',
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div style={{ display: 'grid', gap: 2 }}>
+                        <div style={{ fontWeight: 700 }}>{name}</div>
+                        <div className="muted" style={{ fontSize: 13 }}>
+                          数量：{item.quantity} · 商品 ID：{item.productId}
+                        </div>
+                      </div>
+                      <span className="chip" style={{ background: '#e0f2fe', color: '#075985' }}>
+                        ¥ {Number(item.price || product?.price || 0).toFixed(2)}
+                      </span>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          )}
+          <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
+            {JSON.stringify(result, null, 2)}
+          </pre>
         </div>
       )}
     </div>
