@@ -31,7 +31,7 @@ export default function PersonalOrderPage() {
     load();
   }, []);
 
-  const grouped = useMemo(() => {
+  const productMap = useMemo<Record<string, OrderSelection[]>>(() => {
     const map: Record<string, OrderSelection[]> = {};
     products.forEach((p) => {
       const key = p.categoryName || '未分组';
@@ -124,7 +124,7 @@ export default function PersonalOrderPage() {
         <div className="card" style={{ border: '1px dashed var(--border)' }}>加载中...</div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {Object.entries(grouped).map(([category, items]) => (
+          {Object.entries(productMap).map(([category, items]) => (
             <div key={category} className="card" style={{ border: '1px solid var(--border)', background: '#fff' }}>
               <div className="section-title" style={{ marginBottom: 8 }}>
                 <div>
