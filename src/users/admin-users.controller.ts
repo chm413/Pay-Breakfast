@@ -174,7 +174,7 @@ export class AdminUsersController {
     @Req() req?: any,
   ) {
     ensureAdmin(req);
-    const user = await this.usersRepository.findOne({ where: { id }, relations: ['accounts'] });
+    const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     const account = await this.accountsService.getOrCreatePersonalAccountForUser(id);
     const where: any = { account: { id: account.id } };
