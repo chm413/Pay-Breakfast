@@ -31,7 +31,7 @@ export default function PersonalOrderPage() {
     load();
   }, []);
 
-  const productMap = useMemo(() => {
+  const productMap = useMemo<Record<string, OrderSelection[]>>(() => {
     const map: Record<string, OrderSelection[]> = {};
     products.forEach((p) => {
       const key = p.categoryName || '未分组';
