@@ -219,6 +219,10 @@ export async function updateAdminProduct(id: number, payload: Partial<BreakfastP
   });
 }
 
+export async function disableAdminProduct(id: number) {
+  return request(`/admin/products/${id}/disable`, { method: 'PUT' });
+}
+
 export async function deleteAdminProduct(id: number) {
   return request(`/admin/products/${id}`, { method: 'DELETE' });
 }

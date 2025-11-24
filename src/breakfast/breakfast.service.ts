@@ -35,9 +35,10 @@ export class BreakfastService {
     return { id, enabled: false };
   }
 
-  async listProducts(filters: { categoryId?: number; enabled?: boolean }) {
+  async listProducts(filters: { categoryId?: number; enabled?: boolean; includeDeleted?: boolean; vendorId?: number }) {
     const where: FindOptionsWhere<BreakfastProduct> = {};
     if (filters.categoryId) where.categoryId = filters.categoryId;
+    if (filters.vendorId) where.vendorId = filters.vendorId;
     if (filters.enabled !== undefined) where.enabled = filters.enabled;
     const list = await this.productRepo.find({ where, relations: ['category', 'vendor'], order: { id: 'ASC' } });
     return list.map((product) => {
@@ -59,8 +60,9 @@ export class BreakfastService {
       const vendor = await this.vendorRepo.findOne({ where: { id: payload.vendorId } });
       if (!vendor) throw new NotFoundException('店家不存在');
     }
-    const created = this.productRepo.create(payload);
-    return this.productRepo.save(created);
+    const created = this.productRepo.create({ ...payload, isDeleted: false });
+    const saved = await this.productRepo.save(created);
+    return this.productRepo.findOne({ where: { id: saved.id }, relations: ['category', 'vendor'] });
   }
 
   async updateProduct(id: number, payload: Partial<BreakfastProduct>) {
@@ -73,12 +75,17 @@ export class BreakfastService {
       if (!vendor) throw new NotFoundException('店家不存在');
     }
     await this.productRepo.update({ id }, payload);
-    return this.productRepo.findOne({ where: { id }, relations: ['category'] });
+    return this.productRepo.findOne({ where: { id }, relations: ['category', 'vendor'] });
   }
 
   async disableProduct(id: number) {
     await this.productRepo.update({ id }, { enabled: false });
     return { id, enabled: false };
+  }
+
+  async deleteProduct(id: number) {
+    await this.productRepo.update({ id }, { enabled: false, isDeleted: true });
+    return { id, deleted: true };
   }
 
   async getProductOrFail(id: number) {

@@ -37,7 +37,7 @@ button {
 
 .pill {
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 12px;
   padding: 9px 14px;
   font-weight: 600;

@@ -41,6 +41,9 @@ export class BreakfastProduct {
   @Column({ type: 'tinyint', default: true })
   enabled!: boolean;
 
+  @Column({ type: 'tinyint', name: 'is_deleted', default: false })
+  isDeleted!: boolean;
+
   @Column({ length: 255, nullable: true })
   remark?: string;
 

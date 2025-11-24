@@ -38,8 +38,9 @@ export class VendorsController {
     @Param('id', ParseIntPipe) id: number,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('categoryId') categoryId?: string,
   ) {
-    return this.service.settlements(req, id, from, to);
+    return this.service.settlements(req, id, from, to, categoryId ? Number(categoryId) : undefined);
   }
 
   @Post('admin/vendors/settlements/run')
