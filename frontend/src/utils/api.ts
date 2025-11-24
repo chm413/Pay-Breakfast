@@ -68,9 +68,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (!res.ok) {
-    const bodyText = await res.text();
-    const detail = bodyText ? bodyText.slice(0, 400) : res.statusText;
-    throw new Error(`HTTP ${res.status} ${res.statusText}: ${detail}`);
+    let detail = res.statusText;
+    let code: string | number | undefined;
+    try {
+      const data = await res.json();
+      if (Array.isArray((data as any)?.message)) {
+        detail = (data as any).message.join('; ');
+      } else {
+        detail = (data as any)?.message || (data as any)?.error || res.statusText;
+      }
+      code = (data as any)?.code || (data as any)?.statusCode;
+    } catch {
+      try {
+        const text = await res.text();
+        detail = text || res.statusText;
+      } catch {
+        detail = res.statusText;
+      }
+    }
+    const error: any = new Error(`HTTP ${res.status} ${res.statusText}: ${detail}`);
+    if (code !== undefined) error.code = code;
+    (error as any).status = res.status;
+    throw error;
   }
   return (await res.json()) as T;
 }
@@ -82,6 +101,14 @@ export async function login(username: string, password: string) {
     body: JSON.stringify({ username, password: encryptedPassword, encrypted: true }),
   });
   return data;
+}
+
+export async function recheckPassword(password: string) {
+  const encryptedPassword = await encryptSensitive(password);
+  return request('/auth/recheck-password', {
+    method: 'POST',
+    body: JSON.stringify({ password: encryptedPassword, encrypted: true }),
+  });
 }
 
 export async function registerUser(payload: RegisterPayload) {
