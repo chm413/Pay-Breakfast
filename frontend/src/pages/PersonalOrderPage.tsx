@@ -124,7 +124,7 @@ export default function PersonalOrderPage() {
         <div className="card" style={{ border: '1px dashed var(--border)' }}>加载中...</div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {Object.entries(productMap).map(([category, items]: [string, OrderSelection[]]) => (
+          {(Object.entries(productMap) as [string, OrderSelection[]][]).map(([category, items]) => (
             <div key={category} className="card" style={{ border: '1px solid var(--border)', background: '#fff' }}>
               <div className="section-title" style={{ marginBottom: 8 }}>
                 <div>
