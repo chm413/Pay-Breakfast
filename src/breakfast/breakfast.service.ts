@@ -35,10 +35,11 @@ export class BreakfastService {
     return { id, enabled: false };
   }
 
-  async listProducts(filters: { categoryId?: number; enabled?: boolean }) {
+  async listProducts(filters: { categoryId?: number; enabled?: boolean; includeDeleted?: boolean }) {
     const where: FindOptionsWhere<BreakfastProduct> = {};
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.enabled !== undefined) where.enabled = filters.enabled;
+    if (!filters.includeDeleted) where.isDeleted = false;
     return this.productRepo.find({ where, relations: ['category'], order: { id: 'ASC' } });
   }
 
@@ -49,7 +50,7 @@ export class BreakfastService {
       const vendor = await this.vendorRepo.findOne({ where: { id: payload.vendorId } });
       if (!vendor) throw new NotFoundException('店家不存在');
     }
-    const created = this.productRepo.create(payload);
+    const created = this.productRepo.create({ ...payload, isDeleted: false });
     return this.productRepo.save(created);
   }
 
@@ -69,6 +70,11 @@ export class BreakfastService {
   async disableProduct(id: number) {
     await this.productRepo.update({ id }, { enabled: false });
     return { id, enabled: false };
+  }
+
+  async deleteProduct(id: number) {
+    await this.productRepo.update({ id }, { enabled: false, isDeleted: true });
+    return { id, deleted: true };
   }
 
   async getProductOrFail(id: number) {

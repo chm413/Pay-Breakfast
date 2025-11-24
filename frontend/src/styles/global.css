@@ -1,11 +1,11 @@
 :root {
-  --bg: #0b1220;
-  --card: #0f172a;
-  --border: #1f2937;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --primary: #6366f1;
-  --primary-2: #0ea5e9;
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #4f46e5;
+  --primary-2: #3b82f6;
   --success: #10b981;
   --danger: #ef4444;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -19,10 +19,9 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.18), transparent 25%),
-    radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.18), transparent 30%),
-    linear-gradient(180deg, #0b1220 0%, #0b1528 100%);
+  background: radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.08), transparent 25%),
+    radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.12), transparent 30%),
+    linear-gradient(180deg, #f7f8fc 0%, #eef2ff 100%);
   min-height: 100vh;
 }
 
@@ -37,7 +36,7 @@ button {
 
 .pill {
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
+  background: #f8fafc;
   border-radius: 12px;
   padding: 9px 14px;
   font-weight: 600;
@@ -63,15 +62,15 @@ button {
   background: var(--card);
   border-radius: 18px;
   padding: 20px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--border);
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 18px 45px rgba(14, 165, 233, 0.16);
-  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.15);
+  backdrop-filter: blur(10px);
 }
 
 .input {
@@ -80,8 +79,7 @@ button {
   margin: 8px 0;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
+  background: #f8fafc;
 }
 
 .button-primary {
@@ -106,7 +104,7 @@ button {
   padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
+  background: #fff;
   color: var(--text);
   font-weight: 600;
   cursor: pointer;
@@ -119,8 +117,8 @@ button {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  background: rgba(99, 102, 241, 0.18);
-  color: #c7d2fe;
+  background: #e0f2fe;
+  color: #0369a1;
   font-weight: 600;
 }
 
@@ -130,8 +128,8 @@ button {
   gap: 6px;
   padding: 6px 10px;
   border-radius: 10px;
-  background: rgba(99, 102, 241, 0.18);
-  color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
   font-weight: 600;
   font-size: 12px;
 }
@@ -149,7 +147,7 @@ button {
 }
 
 .table th {
-  color: var(--muted);
+  color: #475569;
   font-size: 14px;
 }
 
@@ -165,8 +163,8 @@ button {
 }
 
 .tag {
-  background: rgba(99, 102, 241, 0.16);
-  color: #cbd5f5;
+  background: #eef2ff;
+  color: #4338ca;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 10px;
@@ -183,11 +181,11 @@ button {
 .nav a {
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #cbd5f5;
+  background: #f8fafc;
+  color: #312e81;
   font-weight: 700;
   border: 1px solid var(--border);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -200,7 +198,7 @@ button {
   color: white;
   border-color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.18);
 }
 
 .flex-grid {
@@ -219,7 +217,7 @@ button {
   border-radius: 20px;
   padding: 22px;
   box-shadow: 0 18px 45px rgba(99, 102, 241, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .card-grid {
@@ -234,7 +232,7 @@ button {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  background: #0ea5e9;
   color: #fff;
   border: none;
   cursor: pointer;
@@ -267,7 +265,7 @@ button {
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
-  background: var(--bg);
+  background: #f8fafc;
 }
 
 .admin-nav {
@@ -322,20 +320,20 @@ button {
 }
 
 .admin-header {
-  background: var(--card);
+  background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
 .admin-content {
-  background: var(--card);
+  background: #fff;
   border-radius: 16px;
   border: 1px solid var(--border);
   padding: 16px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
 @media (max-width: 960px) {

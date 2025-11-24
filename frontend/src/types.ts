@@ -22,6 +22,7 @@ export interface BreakfastProduct {
   price: number;
   unit: string;
   enabled: boolean;
+  isDeleted?: boolean;
   remark?: string | null;
 }
 

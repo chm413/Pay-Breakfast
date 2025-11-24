@@ -91,7 +91,6 @@ export default function UserManagementPage() {
       const txList = (await fetchUserTransactions(user.id)) as any[];
       setTransactions(txList);
     } catch (err: any) {
-      setTransactions([]);
       setError(err?.message || '加载交易记录失败');
     }
   }
