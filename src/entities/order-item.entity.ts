@@ -10,6 +10,7 @@ import {
 import { Account } from './account.entity';
 import { Order } from './order.entity';
 import { BreakfastProduct } from './breakfast-product.entity';
+import { BreakfastCategory } from './breakfast-category.entity';
 
 @Entity('order_items')
 export class OrderItem {
@@ -36,6 +37,19 @@ export class OrderItem {
 
   @Column({ name: 'product_id', type: 'bigint' })
   productId!: number;
+
+  @ManyToOne(() => BreakfastCategory, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
+  category?: BreakfastCategory | null;
+
+  @Column({ name: 'category_id', type: 'bigint', nullable: true })
+  categoryId?: number | null;
+
+  @Column({ name: 'vendor_id', type: 'bigint', nullable: true })
+  vendorId?: number | null;
+
+  @Column({ name: 'target_user_id', type: 'bigint', nullable: true })
+  targetUserId?: number | null;
 
   @Column({ type: 'int', default: 1 })
   quantity!: number;
