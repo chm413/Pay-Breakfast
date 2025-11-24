@@ -14,8 +14,9 @@ export class RechargeController {
   constructor(private readonly rechargeService: RechargeService) {}
 
   @Get()
-  list(@Query('status') status?: string) {
-    return this.rechargeService.listRequests(status);
+  list(@Query('status') status?: string, @Req() req?: AuthedRequest) {
+    const user = (req as any)?.user;
+    return this.rechargeService.listRequests(status, user);
   }
 
   @Post()

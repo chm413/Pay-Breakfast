@@ -40,13 +40,17 @@ export class BreakfastService {
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.vendorId) where.vendorId = filters.vendorId;
     if (filters.enabled !== undefined) where.enabled = filters.enabled;
-    if (!filters.includeDeleted) where.isDeleted = false;
     const list = await this.productRepo.find({ where, relations: ['category', 'vendor'], order: { id: 'ASC' } });
-    return list.map((item) => ({
-      ...item,
-      categoryName: item.category?.name,
-      vendorName: item.vendor?.name,
-    }));
+    return list.map((product) => {
+      const { category, vendor, ...rest } = product as any;
+      return {
+        ...rest,
+        categoryId: product.categoryId,
+        categoryName: vendor?.name || category?.name,
+        vendorId: product.vendorId ?? vendor?.id,
+        vendorName: vendor?.name,
+      } as any;
+    });
   }
 
   async createProduct(payload: Partial<BreakfastProduct>) {

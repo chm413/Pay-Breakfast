@@ -16,6 +16,7 @@ import AdminGuard from './components/AdminGuard';
 import AdminLayout from './layouts/AdminLayout';
 import { isAdminRoleList } from './utils/roles';
 import PublicAnnouncementsPage from './pages/PublicAnnouncementsPage';
+import RechargeRequestPage from './pages/RechargeRequestPage';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
@@ -33,6 +34,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     { to: '/', label: '仪表盘', icon: '📊' },
     { to: '/profile', label: '个人中心', icon: '👤' },
     { to: '/order', label: '我要下单', icon: '🧾' },
+    { to: '/recharge', label: '余额充值', icon: '💳' },
     { to: '/announcements', label: '公告通知', icon: '📣' },
   ];
 
@@ -120,6 +122,7 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/order" element={<PersonalOrderPage />} />
+                <Route path="/recharge" element={<RechargeRequestPage />} />
                 <Route path="/announcements" element={<PublicAnnouncementsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

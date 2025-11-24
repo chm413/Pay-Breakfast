@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchLoginAnnouncements } from '../utils/api';
+import { fetchPublicAnnouncements } from '../utils/api';
 
 interface AnnItem {
   id: number;
@@ -18,7 +18,7 @@ export default function PublicAnnouncementsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetchLoginAnnouncements(); // 复用已存在的公开接口
+        const res = await fetchPublicAnnouncements();
         setItems(Array.isArray(res) ? res : []);
         setError('');
       } catch (e: any) {

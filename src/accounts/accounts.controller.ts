@@ -28,6 +28,8 @@ export class AccountsController {
       balance: Number(account.balance),
       creditLimit: Number(account.creditLimit),
       status: account.status,
+      reminderThreshold: Number(account.reminderThreshold),
+      dangerThreshold: Number(account.dangerThreshold),
     };
   }
 

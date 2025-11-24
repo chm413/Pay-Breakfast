@@ -9,4 +9,9 @@ export class PublicAnnouncementsController {
   loginPopups() {
     return this.service.listForLogin();
   }
+
+  @Get('public')
+  listPublic() {
+    return this.service.listPublic();
+  }
 }
