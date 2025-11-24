@@ -18,10 +18,13 @@ export interface BreakfastProduct {
   id: number;
   categoryId: number;
   categoryName?: string;
+  vendorId?: number;
+  vendorName?: string;
   name: string;
   price: number;
   unit: string;
   enabled: boolean;
+  isDeleted?: boolean;
   remark?: string | null;
 }
 
@@ -83,4 +86,6 @@ export interface VendorSettlement {
   date: string;
   ordersCount: number;
   totalAmount: number;
+  categoryId?: number | null;
+  categoryName?: string | null;
 }

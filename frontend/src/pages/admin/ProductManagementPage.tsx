@@ -3,6 +3,7 @@ import AdminGuard from '../../components/AdminGuard';
 import { BreakfastCategory, BreakfastProduct } from '../../types';
 import {
   createAdminProduct,
+  disableAdminProduct,
   deleteAdminProduct,
   getAdminCategories,
   getAdminProducts,
@@ -96,10 +97,23 @@ export default function ProductManagementPage() {
     }
   }
 
+  async function handleDisable(product: any) {
+    try {
+      if (product.enabled) {
+        await disableAdminProduct(product.id);
+      } else {
+        await updateAdminProduct(product.id, { enabled: true });
+      }
+      await refreshProducts();
+    } catch (err: any) {
+      setError(err?.message || '更新状态失败');
+    }
+  }
+
   async function handleDelete(id: number) {
     try {
       await deleteAdminProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      await refreshProducts();
     } catch (err: any) {
       setError(err?.message || '删除失败');
     }
@@ -222,9 +236,13 @@ export default function ProductManagementPage() {
                   <td>¥ {Number(p.price).toFixed(2)}</td>
                   <td>{p.unit}</td>
                   <td>
-                    <span className="badge" style={{ background: p.enabled ? '#dcfce7' : '#fee2e2' }}>
-                      {p.enabled ? '启用' : '禁用'}
-                    </span>
+                    {p.isDeleted ? (
+                      <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>已删除</span>
+                    ) : (
+                      <span className="badge" style={{ background: p.enabled ? '#dcfce7' : '#fee2e2' }}>
+                        {p.enabled ? '启用' : '下架'}
+                      </span>
+                    )}
                   </td>
                   <td>{p.remark || '-'}</td>
                   <td style={{ display: 'flex', gap: 8 }}>
@@ -241,11 +259,14 @@ export default function ProductManagementPage() {
                           remark: p.remark || '',
                         });
                       }}
-                    >
-                      编辑
+                      >
+                        编辑
+                      </button>
+                    <button className="button-primary" style={{ background: '#f97316' }} onClick={() => handleDisable(p)}>
+                      {p.enabled ? '下架' : '上架'}
                     </button>
-                    <button className="button-primary" style={{ background: '#f97316' }} onClick={() => handleDelete(p.id)}>
-                      下架/删除
+                    <button className="button-primary" style={{ background: '#f87171' }} onClick={() => handleDelete(p.id)}>
+                      删除
                     </button>
                   </td>
                 </tr>
